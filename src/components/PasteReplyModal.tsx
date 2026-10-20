@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Modal } from './Modal'
 import { pasteInboundReply, pendingOutboxFor } from '../lib/store'
-import type { Lead } from '../lib/types'
 
 /** Paste what the other side actually replied → logs it, flips status,
  * cancels pending outbound (reply-cancels-pending, doc 22). */
@@ -9,7 +8,7 @@ export function PasteReplyModal({
   lead,
   onClose,
 }: {
-  lead: Lead | null
+  lead: { businessName: string } | null
   onClose: () => void
 }) {
   const [text, setText] = useState('')

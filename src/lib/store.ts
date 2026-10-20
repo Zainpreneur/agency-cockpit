@@ -327,3 +327,84 @@ export function createProposal(draft: ProposalDraft): number {
   })
   return createdId
 }
+
+/** Won lead → client record (W1 ending) + queues the intake questionnaire (C2). Idempotent. */
+export function convertLeadToClient(leadId: number): number | null {
+  let result: number | null = null
+  setState((s) => {
+    const lead = s.leads.find((l) => l.id === leadId)
+    if (!lead) return
+    const existing = s.clients.find((c) => c.name === lead.businessName)
+    if (existing) {
+      result = existing.id
+      return
+    }
+    if (lead.status !== 'won') return // guard: only closed-won leads convert
+    const id = s.seq + 1
+    const now = new Date().toISOString()
+    let next: AppState = {
+      ...s,
+      seq: s.seq + 4,
+      clients: [
+        ...s.clients,
+        {
+          id,
+          name: lead.businessName,
+          contactName: lead.contactName,
+          email: lead.email,
+          phone: lead.phone,
+          city: lead.city,
+          industry: lead.industry,
+          status: 'active' as const,
+          since: now,
+          notes: lead.notes,
+        },
+      ],
+      outbox: [
+        ...s.outbox,
+        {
+          id: id + 1,
+          contactableName: lead.businessName,
+          stakeholder: 'client' as const,
+          templateCode: 'intake_request',
+          subject: 'Two quick questions before we start',
+          body: `Hi ${lead.contactName},\n\nBefore we start, reply to this email with:\n\n1. What do you sell?\n2. Who are your customers?\n3. What should customers be able to do online? (book / order / pay / see prices / contact / track)\n4. Which of those matters most?\n5. Anything else?\n\nZain`,
+          dueAt: now,
+          status: 'ready' as const,
+        },
+      ],
+    }
+    next = {
+      ...next,
+      statusEvents: withEvent({ ...next, seq: next.seq + 1 }, {
+        entity: 'client', entityId: id, from: 'lead', to: 'active',
+        note: `converted from lead #${leadId}`,
+      }),
+    }
+    result = id
+    return { ...next, seq: next.seq + 1 }
+  })
+  return result
+}
+
+/** Campaign play/pause with an event (boards and gestures flip, guards would outrank). */
+export function toggleCampaign(campaignId: number) {
+  setState((s) => {
+    const c = s.campaigns.find((x) => x.id === campaignId)
+    if (!c || c.status === 'ended') return
+    const to = c.status === 'active' ? 'paused' : 'active'
+    let next: AppState = {
+      ...s,
+      campaigns: s.campaigns.map((x) =>
+        x.id === campaignId ? { ...x, status: to as AppState['campaigns'][number]['status'] } : x,
+      ),
+    }
+    next = {
+      ...next,
+      statusEvents: withEvent({ ...next, seq: next.seq + 1 }, {
+        entity: 'campaign', entityId: campaignId, from: c.status, to,
+      }),
+    }
+    return { ...next, seq: next.seq + 1 }
+  })
+}

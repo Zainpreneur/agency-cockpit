@@ -1,28 +1,44 @@
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Today } from './pages/Today'
+import { Dashboard } from './pages/Dashboard'
 import { LeadsBoard } from './pages/LeadsBoard'
 import { LeadDetail } from './pages/LeadDetail'
 import { ProposalsBoard } from './pages/ProposalsBoard'
 import { ProposalBuilder } from './pages/ProposalBuilder'
+import { Campaigns } from './pages/Campaigns'
+import { Clients } from './pages/Clients'
+import { ClientDetail } from './pages/ClientDetail'
 import { Projects } from './pages/Projects'
+import { Vendors } from './pages/Vendors'
+import { Assets } from './pages/Assets'
 import { Invoices } from './pages/Invoices'
 import { Payouts } from './pages/Payouts'
 import { People } from './pages/People'
 import { Catalogue } from './pages/Catalogue'
 import { Outbox } from './pages/Outbox'
 import { Templates } from './pages/Templates'
+import { Calendar } from './pages/Calendar'
 import { Settings } from './pages/Settings'
 
 type NavItem = { to: string; label: string; exact?: boolean }
 
 const GROUPS: { title: string; items: NavItem[] }[] = [
-  { title: '', items: [{ to: '/', label: '☀ Today', exact: true }] },
+  { title: '', items: [
+    { to: '/', label: '☀ Today', exact: true },
+    { to: '/dashboard', label: '◧ Dashboard' },
+  ]},
   { title: 'Sales', items: [
     { to: '/sales/leads', label: 'Leads' },
     { to: '/sales/proposals', label: 'Proposals' },
+    { to: '/sales/campaigns', label: 'Campaigns' },
     { to: '/sales/catalogue', label: 'Catalogue' },
   ]},
-  { title: 'Delivery', items: [{ to: '/projects', label: 'Projects & infra' }] },
+  { title: '', items: [{ to: '/clients', label: '👥 Clients' }] },
+  { title: 'Delivery', items: [
+    { to: '/projects', label: 'Projects' },
+    { to: '/vendors', label: 'Vendors' },
+    { to: '/assets', label: 'Assets' },
+  ]},
   { title: 'Money', items: [
     { to: '/money/invoices', label: 'Invoices' },
     { to: '/money/payouts', label: 'Payouts' },
@@ -32,7 +48,10 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     { to: '/comms/outbox', label: 'Outbox' },
     { to: '/comms/templates', label: 'Templates' },
   ]},
-  { title: '', items: [{ to: '/settings', label: '⚙ Settings' }] },
+  { title: '', items: [
+    { to: '/calendar', label: '▦ Calendar' },
+    { to: '/settings', label: '⚙ Settings' },
+  ]},
 ]
 
 function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
@@ -90,17 +109,24 @@ export function App() {
         <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 pb-24 md:pb-10">
           <Routes>
             <Route path="/" element={<Today />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/sales/leads" element={<LeadsBoard />} />
             <Route path="/sales/leads/:id" element={<LeadDetail />} />
             <Route path="/sales/proposals" element={<ProposalsBoard />} />
             <Route path="/sales/proposals/new" element={<ProposalBuilder />} />
+            <Route path="/sales/campaigns" element={<Campaigns />} />
             <Route path="/sales/catalogue" element={<Catalogue />} />
+            <Route path="/clients" element={<Clients />} />
+            <Route path="/clients/:id" element={<ClientDetail />} />
             <Route path="/projects" element={<Projects />} />
+            <Route path="/vendors" element={<Vendors />} />
+            <Route path="/assets" element={<Assets />} />
             <Route path="/money/invoices" element={<Invoices />} />
             <Route path="/money/payouts" element={<Payouts />} />
             <Route path="/people" element={<People />} />
             <Route path="/comms/outbox" element={<Outbox />} />
             <Route path="/comms/templates" element={<Templates />} />
+            <Route path="/calendar" element={<Calendar />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

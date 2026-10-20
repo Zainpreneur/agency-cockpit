@@ -269,4 +269,53 @@ export const mockData: AppState = {
     { id: 1, project: 'Alnoor POS deployment', target: 20000, raised: 20000, rule: 'fixed', sourceKind: 'salvage_round', status: 'funded' },
     { id: 2, project: 'Ocean Treats menu site', target: 6000, raised: 3500, rule: 'multiple', sourceKind: 'new_capital', status: 'seeking' },
   ],
+
+  clients: [
+    { id: 1, name: 'Alnoor Hotel', contactName: 'Faisal Alnoor', email: 'faisal@alnoorhotel.sa', phone: '+966 55 010 4411', city: 'Jeddah', industry: 'hotel', status: 'active', since: d(-90), notes: 'Sister business found us through the salon project in Riyadh.' },
+    { id: 2, name: 'Gulf Spa', contactName: 'Reem', email: 'reem@gulfspa.sa', phone: '+966 53 445 9012', city: 'Riyadh', industry: 'salon', status: 'delivered', since: d(-120) },
+    { id: 3, name: 'Desert Carwash', contactName: 'Majed', email: 'majed@desertcarwash.sa', phone: '+966 55 778 1020', city: 'Riyadh', industry: 'carwash', status: 'delivered', since: d(-40), notes: 'INV-38 overdue 16 days — nag sequence running.' },
+    { id: 4, name: 'Ocean Treats', contactName: 'Hala', email: 'hala@oceantreats.sa', phone: '+966 56 300 7788', city: 'Jeddah', industry: 'restaurant', status: 'active', since: d(-20) },
+  ],
+
+  vendors: [
+    { id: 1, name: 'Al-Rashid Trading', category: 'POS hardware', contactName: 'Tariq', phone: '+966 55 900 1122', email: 'sales@alrashidtrading.sa', terms: '50% advance · 30 days' },
+    { id: 2, name: 'TechSouq', category: 'Peripherals & accessories', contactName: 'Sami', phone: '+966 50 445 6677', email: 'sami@techsouq.sa', terms: 'On delivery' },
+    { id: 3, name: 'CloudHost Arabia', category: 'Hosting & VPS', contactName: 'Dana', phone: '+966 54 220 8899', email: 'dana@cloudhost.sa', terms: 'Prepaid yearly' },
+  ],
+
+  projects: [
+    { id: 1, name: 'Alnoor POS deployment', clientName: 'Alnoor Hotel', phase: 'hardware ordered · deployment prep', status: 'procurement', fundedBy: 'investor_advance', stake: 10000 },
+    { id: 2, name: 'Ocean Treats menu site', clientName: 'Ocean Treats', phase: 'hardware received · site in build', status: 'building', fundedBy: 'own_cash', stake: 2200 },
+    { id: 3, name: 'Aqua Pets booking site', clientName: 'Aqua Pets', phase: 'proposal sent · awaiting decision', status: 'proposal', fundedBy: 'own_cash', stake: 3000 },
+    { id: 4, name: 'Gulf Spa booking site', clientName: 'Gulf Spa', phase: 'delivered · final invoice drafted', status: 'delivered', fundedBy: 'own_cash', stake: 2700 },
+    { id: 5, name: 'Desert Carwash booking module', clientName: 'Desert Carwash', phase: 'delivered · final payment overdue', status: 'delivered', fundedBy: 'own_cash', stake: 2400 },
+  ],
+
+  campaigns: [
+    {
+      id: 1, name: 'October Riyadh outreach', status: 'active',
+      audience: 'Riyadh service businesses · maps list', channel: 'email',
+      steps: [
+        { day: 0, templateCode: 'lead_intro' },
+        { day: 3, templateCode: 'lead_followup_1' },
+        { day: 8, templateCode: 'lead_followup_2' },
+      ],
+      enrolled: 24, replied: 5,
+    },
+    {
+      id: 2, name: 'Jeddah restaurants Q4', status: 'paused',
+      audience: 'Jeddah restaurants without ordering', channel: 'email',
+      steps: [
+        { day: 0, templateCode: 'lead_intro' },
+        { day: 4, templateCode: 'lead_followup_1' },
+      ],
+      enrolled: 12, replied: 2,
+    },
+    {
+      id: 3, name: 'Dormant lead re-check', status: 'ended',
+      audience: 'Leads untouched 60+ days', channel: 'email',
+      steps: [{ day: 0, templateCode: 'lead_followup_1' }],
+      enrolled: 9, replied: 1,
+    },
+  ],
 }

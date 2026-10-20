@@ -203,6 +203,50 @@ export type FundingRound = {
   status: 'seeking' | 'committed' | 'funded' | 'returned' | 'closed'
 }
 
+export type Client = {
+  id: number
+  name: string
+  contactName: string
+  email: string
+  phone: string
+  city: string
+  industry: string
+  status: 'active' | 'delivered' | 'archived'
+  since: string
+  notes?: string
+}
+
+export type Vendor = {
+  id: number
+  name: string
+  category: string
+  contactName: string
+  phone: string
+  email: string
+  terms: string
+}
+
+export type Project = {
+  id: number
+  name: string
+  clientName: string
+  phase: string
+  status: 'proposal' | 'procurement' | 'building' | 'deploying' | 'delivered' | 'maintenance'
+  fundedBy: 'own_cash' | 'investor_advance'
+  stake: number
+}
+
+export type Campaign = {
+  id: number
+  name: string
+  status: 'active' | 'paused' | 'ended'
+  audience: string
+  channel: 'email'
+  steps: { day: number; templateCode: string }[]
+  enrolled: number
+  replied: number
+}
+
 export type AppState = {
   seq: number
   leads: Lead[]
@@ -223,4 +267,8 @@ export type AppState = {
   devices: ClientDevice[]
   repos: RepoRow[]
   fundingRounds: FundingRound[]
+  clients: Client[]
+  vendors: Vendor[]
+  projects: Project[]
+  campaigns: Campaign[]
 }

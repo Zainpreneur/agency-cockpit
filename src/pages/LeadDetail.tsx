@@ -1,21 +1,24 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PageHeader, SectionCard, EmptyRow } from '../components/Layout'
 import { Chip, StatusChip } from '../components/StatusChip'
 import { PasteReplyModal } from '../components/PasteReplyModal'
 import { SendEmailModal } from '../components/SendEmailModal'
-import { useAppState, sendOutboxItem } from '../lib/store'
+import { useAppState, sendOutboxItem, convertLeadToClient } from '../lib/store'
 import { dateShort, money } from '../lib/format'
 import type { OutboxItem } from '../lib/types'
 
 export function LeadDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const s = useAppState()
   const lead = s.leads.find((l) => l.id === Number(id))
   const [pasteOpen, setPasteOpen] = useState(false)
   const [sendItem, setSendItem] = useState<OutboxItem | null>(null)
 
   if (!lead) return <div className="text-sm text-gray-500">Lead not found. <Link className="text-blue-600" to="/sales/leads">Back to board</Link></div>
+
+  const existingClient = s.clients.find((c) => c.name === lead.businessName)
 
   const timeline = s.commsLog
     .filter((c) => c.contactableName === lead.businessName)
@@ -31,10 +34,27 @@ export function LeadDetail() {
         title={lead.businessName}
         subtitle={`${lead.contactName} · ${lead.industry} · ${lead.city} · ${lead.source.replace('_', ' ')}`}
         action={
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Link to="/sales/leads" className="rounded-lg border border-gray-300 text-sm font-medium px-4 py-2 hover:bg-gray-50">
               ← Board
             </Link>
+            {lead.status === 'won' && existingClient && (
+              <Link to={`/clients/${existingClient.id}`} className="rounded-lg bg-emerald-600 text-white text-sm font-medium px-4 py-2 hover:bg-emerald-700">
+                Open client →
+              </Link>
+            )}
+            {lead.status === 'won' && !existingClient && (
+              <button
+                onClick={() => {
+                  const cid = convertLeadToClient(lead.id)
+                  if (cid) navigate(`/clients/${cid}`)
+                }}
+                className="rounded-lg bg-emerald-600 text-white text-sm font-medium px-4 py-2 hover:bg-emerald-700"
+                title="Creates the client record and queues the intake questionnaire"
+              >
+                Turn into client →
+              </button>
+            )}
             <button onClick={() => setPasteOpen(true)} className="rounded-lg bg-gray-900 text-white text-sm font-medium px-4 py-2 hover:bg-gray-800">
               Paste reply
             </button>
