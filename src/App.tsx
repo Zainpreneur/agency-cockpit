@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Today } from './pages/Today'
 import { Dashboard } from './pages/Dashboard'
@@ -21,6 +22,7 @@ import { Calendar } from './pages/Calendar'
 import { Settings } from './pages/Settings'
 import { ProjectDetail } from './pages/ProjectDetail'
 import { InvestorDetail } from './pages/InvestorDetail'
+import { CommandPalette, useCommandPalette } from './components/CommandPalette'
 
 type NavItem = { to: string; label: string; exact?: boolean }
 
@@ -100,6 +102,9 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export function App() {
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  useCommandPalette(() => setPaletteOpen(true))
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Desktop sidebar */}
@@ -158,6 +163,8 @@ export function App() {
           </NavLink>
         ))}
       </nav>
+
+      <CommandPalette isOpen={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   )
 }

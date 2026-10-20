@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { PageHeader, SectionCard } from '../components/Layout'
 import { Chip } from '../components/StatusChip'
 
@@ -10,7 +10,23 @@ export function Settings() {
   const [invoiceDueDays, setInvoiceDueDays] = useState(14)
   const [depositPct, setDepositPct] = useState(50)
   const [gate, setGate] = useState(true)
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') === 'dark'
+    }
+    return false
+  })
   const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark')
+      localStorage.setItem('theme', 'dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+      localStorage.setItem('theme', 'light')
+    }
+  }, [darkMode])
 
   const save = () => {
     // becomes PUT /settings when the backend lands (app_settings table, schema v8)
@@ -103,6 +119,26 @@ export function Settings() {
               <Chip tone="gray">concentration cap</Chip>
             </div>
             <p className="text-xs text-gray-400">Guards outrank gestures everywhere — boards included.</p>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Appearance">
+          <div className="p-4 space-y-3">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-medium text-gray-900">Dark mode</div>
+                <div className="text-xs text-gray-500 mt-0.5">
+                  Toggle between light and dark themes. Preference saved locally.
+                </div>
+              </div>
+              <button
+                onClick={() => setDarkMode(!darkMode)}
+                className={`shrink-0 rounded-full w-12 h-6 transition relative ${darkMode ? 'bg-blue-600' : 'bg-gray-300'}`}
+                aria-pressed={darkMode}
+              >
+                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${darkMode ? 'left-6.5' : 'left-0.5'}`} />
+              </button>
+            </div>
           </div>
         </SectionCard>
 

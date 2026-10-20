@@ -21,6 +21,15 @@ npm run smoke      # route + wizard + cascade smoke (dev server must be up)
 npm run smoke:crud # create/edit/delete + guard smoke (dev server must be up)
 ```
 
+## New in this release (Phase B + C foundations)
+
+- **⌘K Command Palette** — Actions first (new lead, mark paid, send invoice…), then fuzzy search across all entities
+- **Dark mode** — Toggle in Settings, persists in localStorage
+- **Generic PipelineBoard** — Reusable kanban with drag = status flip + cascade preview on hover
+- **Enhanced DataTable** — Sort, group by column, bulk-select, CSV export
+- **ReceiptUploader** — Camera/file attachment for PO receipts (mobile-first)
+- **PO Receipts Gallery** — Visual gallery of uploaded receipts
+
 ## Stack
 
 React 19 · Vite 7 · Tailwind 4 · TypeScript · React Router 7
@@ -82,7 +91,7 @@ guards, surface them as errors, never silently drop history.*
 | **Comms** | `/comms/outbox` | Today / this week / sent / cancelled groups; Copy+Send, Skip, chained follow-ups |
 | | `/comms/templates` | ~30 templates with visible follow-up chains, grouped by stakeholder |
 | **Calendar** | `/calendar` | The due-date family in one month grid — follow-ups, quote expiry, invoice due, queued sends, credential expiry, warranties. No new table (doc 25) |
-| **Settings** | `/settings` | Cadence numbers, deposit gate toggle, email-only v1 note |
+| **Settings** | `/settings` | Cadence numbers, deposit gate toggle, dark mode, email-only v1 note |
 
 ### Seven views (doc 25), everywhere they matter
 
@@ -112,13 +121,19 @@ left it.
 - **Timeline = event union**: every detail screen merges `status_events` ∪ `comms_log` ∪ payments so history never drifts.
 - **Bulk actions on money**: invoices and payouts tables support multi-select and CSV export.
 - **Waterfall on investor deals**: capital stack visual clears tiers in order — principal → hurdle → carry.
+- **⌘K everywhere**: one keystroke to any action or entity.
+- **Dark mode**: light/dark themes with localStorage persistence.
+- **Receipt camera**: mobile-first PO receipt capture.
 
 ## Roadmap
 
-1. **Now**: full frontend over mock store — seven views, dashboard, clients,
-   vendors, calendar, campaigns, and full create/edit/delete across every
-   entity (this repo)
-2. **Next**: Hono API + Drizzle/SQLite over the plan's schema v12 — swap
+1. **Done**: Full frontend over mock store — seven views, dashboard, clients,
+   vendors, calendar, campaigns, full CRUD, 360s, drag-and-drop boards, bulk
+   actions, timelines, waterfall, ⌘K palette, dark mode, receipt upload
+2. **Phase B remaining**: Module Orders board, Tickets, Deploy Targets rollback,
+   Client Repos, Update PRs, Expenses/Cost Allocation, Payments table,
+   Investor Payouts board, Receipts gallery
+3. **Phase C**: Reports (P&L, margins), Multi-branch, Default/Salvage workflows,
+   RTL/Arabic, Offline drafts
+4. **Next**: Hono API + Drizzle/SQLite over schema v12 — swap
    `src/lib/store.ts` for TanStack Query + fetch
-3. **Later**: email provider wiring, offline drafts, board drag-and-drop,
-   rollback buttons

@@ -20,11 +20,11 @@ export function StatusChip({
   )
 }
 
-export function Chip({ children, tone = 'gray', title }: { children: React.ReactNode; tone?: Tone; title?: string }) {
+export function Chip({ children, tone = 'gray', title, className }: { children: React.ReactNode; tone?: Tone; title?: string; className?: string }) {
   return (
     <span
       title={title}
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset whitespace-nowrap ${toneCls(tone)}`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset whitespace-nowrap ${toneCls(tone)} ${className ?? ''}`}
     >
       {children}
     </span>
