@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PageHeader } from '../components/Layout'
 import { Chip } from '../components/StatusChip'
 import { ViewSwitcher, useViewMode, type ViewMode } from '../components/ViewSwitcher'
 import { CalendarBoard } from '../components/CalendarBoard'
-import { useAppState, moveLeadStatus, convertLeadToClient } from '../lib/store'
+import { FormModal, type FieldDef } from '../components/FormModal'
+import { useAppState, moveLeadStatus, convertLeadToClient, createLead } from '../lib/store'
 import { dateShort } from '../lib/format'
 import type { Lead, LeadStatus } from '../lib/types'
 import { metaFor } from '../lib/statuses'
@@ -78,10 +80,31 @@ function LeadCard({ lead, onStatus }: { lead: Lead; onStatus: (s: LeadStatus) =>
 
 const MODES: ViewMode[] = ['board', 'cards', 'list', 'table', 'timeline', 'calendar']
 
+const LEAD_FIELDS: FieldDef[] = [
+  { key: 'businessName', label: 'Business name', required: true, placeholder: 'Aqua Pets' },
+  { key: 'contactName', label: 'Contact person', required: true },
+  { key: 'email', label: 'Email', type: 'email' },
+  { key: 'phone', label: 'Phone', type: 'tel' },
+  { key: 'city', label: 'City' },
+  { key: 'industry', label: 'Industry', placeholder: 'pets · salon · carwash…' },
+  {
+    key: 'source', label: 'Source', type: 'select',
+    options: [
+      { value: 'manual', label: 'Manual entry' },
+      { value: 'maps', label: 'Google Maps list' },
+      { value: 'referral', label: 'Referral' },
+      { value: 'instagram', label: 'Instagram' },
+      { value: 'existing_client', label: 'Existing client' },
+    ],
+  },
+  { key: 'nextFollowUpAt', label: 'First follow-up', type: 'date', hint: 'defaults to 3 days out' },
+]
+
 export function LeadsBoard() {
   const s = useAppState()
   const navigate = useNavigate()
   const [mode, setMode] = useViewMode('leads', MODES, 'board')
+  const [newOpen, setNewOpen] = useState(false)
 
   const move = (id: number, status: LeadStatus) => moveLeadStatus(id, status)
 
@@ -95,6 +118,12 @@ export function LeadsBoard() {
         action={
           <div className="flex flex-wrap items-center gap-3">
             <ViewSwitcher modes={MODES} value={mode} onChange={setMode} />
+            <button
+              onClick={() => setNewOpen(true)}
+              className="rounded-lg bg-white ring-1 ring-gray-300 text-gray-700 text-sm font-medium px-4 py-2 hover:bg-gray-50"
+            >
+              + New lead
+            </button>
             <button
               onClick={() => navigate('/sales/proposals/new')}
               className="rounded-lg bg-blue-600 text-white text-sm font-medium px-4 py-2 hover:bg-blue-700"
@@ -247,6 +276,15 @@ export function LeadsBoard() {
             }))}
         />
       )}
+
+      <FormModal
+        open={newOpen}
+        onClose={() => setNewOpen(false)}
+        title="New lead"
+        fields={LEAD_FIELDS}
+        submitLabel="Create lead"
+        onSubmit={createLead}
+      />
     </>
   )
 }

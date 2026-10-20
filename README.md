@@ -15,12 +15,47 @@ TanStack Query — no component changes.
 ```bash
 npm install
 npm run dev      # http://localhost:5173
+npm run build    # production bundle
+npm run typecheck
+npm run smoke      # route + wizard + cascade smoke (dev server must be up)
+npm run smoke:crud # create/edit/delete + guard smoke (dev server must be up)
 ```
 
 ## Stack
 
 React 19 · Vite 7 · Tailwind 4 · TypeScript · React Router 7
 (no backend, per instruction — Hono + Drizzle + SQLite come later)
+
+## Full CRUD, everywhere
+
+Every entity is creatable, editable and removable **from the UI** — not just
+readable (doc 27's forms inventory). One generic `FormModal` (field descriptors
+in, values out) powers the **~25 forms**, and one `ConfirmModal` surfaces the
+store's guard reasons inline. Row-level `✎` / `✕` actions sit on every table,
+card, gallery tile and detail modal.
+
+| Entity | Create | Edit | Remove | Delete guard |
+|---|---|---|---|---|
+| Lead | ✓ | ✓ | Archive | pending sends cancelled |
+| Client | ✓ | ✓ | Archive | blocked while invoices open |
+| Vendor | ✓ | ✓ | Archive / Delete | delete blocked when POs reference it → archive |
+| Team member | ✓ | ✓ | Archive / Delete | delete blocked when payout rows exist → archive |
+| Investor | ✓ | ✓ | Delete | blocked while capital is deployed |
+| Funding round | ✓ | ✓ | Delete | blocked once anyone raised (close instead) |
+| Project | ✓ | ✓ | Delete | blocked when POs point at it |
+| Purchase order | ✓ | ✓ advance draft→invoiced | Delete | draft only — ordered money is settled |
+| Invoice | ✓ | Draft only | Void / Delete draft | paid rows never move (append-only) |
+| Payout | ✓ ad-hoc | — | Cancel | paid rows never move (append-only) |
+| Template | ✓ | ✓ | Delete | blocked while queued in the outbox |
+| Campaign | ✓ | ✓ | Delete | active campaigns must pause first |
+| Catalogue template | ✓ | ✓ | Delete | quotes keep frozen snapshots |
+| Deploy target | ✓ | ✓ | Delete | — |
+| Credential | ✓ | ✓ | Delete | — |
+| Device | ✓ | ✓ | Delete | — |
+
+Creates and status transitions write **append-only status events**; money rows
+are never erased — they void/cancel. The one store rule: *mimic the plan's
+guards, surface them as errors, never silently drop history.*
 
 ## What's built
 
@@ -75,8 +110,9 @@ left it.
 ## Roadmap
 
 1. **Now**: full frontend over mock store — seven views, dashboard, clients,
-   vendors, calendar, campaigns (this repo)
-2. **Next**: Hono API + Drizzle/SQLite over the plan's schema v11 — swap
+   vendors, calendar, campaigns, and full create/edit/delete across every
+   entity (this repo)
+2. **Next**: Hono API + Drizzle/SQLite over the plan's schema v12 — swap
    `src/lib/store.ts` for TanStack Query + fetch
 3. **Later**: email provider wiring, offline drafts, board drag-and-drop,
-   record forms (add client/vendor/device from the UI), rollback buttons
+   rollback buttons

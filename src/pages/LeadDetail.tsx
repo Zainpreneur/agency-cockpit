@@ -4,9 +4,23 @@ import { PageHeader, SectionCard, EmptyRow } from '../components/Layout'
 import { Chip, StatusChip } from '../components/StatusChip'
 import { PasteReplyModal } from '../components/PasteReplyModal'
 import { SendEmailModal } from '../components/SendEmailModal'
-import { useAppState, sendOutboxItem, convertLeadToClient } from '../lib/store'
+import { FormModal, type FieldDef } from '../components/FormModal'
+import { ConfirmModal } from '../components/ConfirmModal'
+import { useAppState, sendOutboxItem, convertLeadToClient, updateLead, archiveLead } from '../lib/store'
 import { dateShort, money } from '../lib/format'
 import type { OutboxItem } from '../lib/types'
+
+const LEAD_FIELDS: FieldDef[] = [
+  { key: 'businessName', label: 'Business name', required: true },
+  { key: 'contactName', label: 'Contact person', required: true },
+  { key: 'email', label: 'Email', type: 'email' },
+  { key: 'phone', label: 'Phone', type: 'tel' },
+  { key: 'city', label: 'City' },
+  { key: 'industry', label: 'Industry' },
+  { key: 'source', label: 'Source' },
+  { key: 'nextFollowUpAt', label: 'Next follow-up', type: 'date' },
+  { key: 'notes', label: 'Notes', type: 'textarea', rows: 3 },
+]
 
 export function LeadDetail() {
   const { id } = useParams()
@@ -15,6 +29,8 @@ export function LeadDetail() {
   const lead = s.leads.find((l) => l.id === Number(id))
   const [pasteOpen, setPasteOpen] = useState(false)
   const [sendItem, setSendItem] = useState<OutboxItem | null>(null)
+  const [editOpen, setEditOpen] = useState(false)
+  const [archiveOpen, setArchiveOpen] = useState(false)
 
   if (!lead) return <div className="text-sm text-gray-500">Lead not found. <Link className="text-blue-600" to="/sales/leads">Back to board</Link></div>
 
@@ -53,6 +69,18 @@ export function LeadDetail() {
                 title="Creates the client record and queues the intake questionnaire"
               >
                 Turn into client →
+              </button>
+            )}
+            <button onClick={() => setEditOpen(true)} className="rounded-lg border border-gray-300 text-sm font-medium px-4 py-2 hover:bg-gray-50">
+              ✎ Edit
+            </button>
+            {lead.status !== 'archived' && (
+              <button
+                onClick={() => setArchiveOpen(true)}
+                className="rounded-lg border border-gray-300 text-sm font-medium px-4 py-2 text-gray-500 hover:bg-gray-50"
+                title="Archive — leaves the board, cancels pending sends"
+              >
+                Archive
               </button>
             )}
             <button onClick={() => setPasteOpen(true)} className="rounded-lg bg-gray-900 text-white text-sm font-medium px-4 py-2 hover:bg-gray-800">
@@ -151,6 +179,39 @@ export function LeadDetail() {
 
       <PasteReplyModal lead={pasteOpen ? lead : null} onClose={() => setPasteOpen(false)} />
       <SendEmailModal item={sendItem} onClose={() => setSendItem(null)} />
+
+      <FormModal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        title={`Edit ${lead.businessName}`}
+        fields={LEAD_FIELDS}
+        submitLabel="Save changes"
+        initial={{
+          businessName: lead.businessName, contactName: lead.contactName, email: lead.email,
+          phone: lead.phone, city: lead.city, industry: lead.industry, source: lead.source,
+          nextFollowUpAt: lead.nextFollowUpAt ? lead.nextFollowUpAt.slice(0, 10) : '',
+          notes: lead.notes ?? '',
+        }}
+        onSubmit={(vals) => updateLead(lead.id, vals)}
+      />
+      <ConfirmModal
+        open={archiveOpen}
+        onClose={() => setArchiveOpen(false)}
+        title={`Archive ${lead.businessName}?`}
+        danger
+        confirmLabel="Archive lead"
+        message={
+          <>
+            The lead leaves the board and any queued sends are cancelled. History (messages,
+            proposals, events) stays — nothing is erased.
+          </>
+        }
+        onConfirm={() => {
+          const res = archiveLead(lead.id)
+          if (res.ok) navigate('/sales/leads')
+          return res
+        }}
+      />
     </>
   )
 }

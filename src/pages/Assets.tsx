@@ -1,14 +1,29 @@
+import { useState } from 'react'
 import { PageHeader, SectionCard } from '../components/Layout'
 import { Chip } from '../components/StatusChip'
 import { ViewSwitcher, useViewMode, type ViewMode } from '../components/ViewSwitcher'
-import { useAppState } from '../lib/store'
+import { FormModal, type FieldDef } from '../components/FormModal'
+import { ConfirmModal } from '../components/ConfirmModal'
+import { RowActions } from '../components/RowActions'
+import { useAppState, createDevice, updateDevice, deleteDevice } from '../lib/store'
 import { dateShort, daysBetween } from '../lib/format'
+import type { ClientDevice } from '../lib/types'
+
+const DEVICE_FIELDS: FieldDef[] = [
+  { key: 'kind', label: 'Device kind', required: true, placeholder: 'POS terminal · receipt printer…' },
+  { key: 'clientName', label: 'Client', required: true },
+  { key: 'serial', label: 'Serial number' },
+  { key: 'warrantyUntil', label: 'Warranty until', type: 'date' },
+]
 
 /** Client devices = physical assets (doc 25 gallery view): color card first,
  * image_url optional — fallback is never a broken image. */
 export function Assets() {
   const s = useAppState()
   const [mode, setMode] = useViewMode('assets', ['gallery', 'list'] as ViewMode[], 'gallery')
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<ClientDevice | null>(null)
+  const [removeTarget, setRemoveTarget] = useState<ClientDevice | null>(null)
 
   const warrantyTone = (until?: string) => {
     if (!until) return 'gray' as const
@@ -24,9 +39,15 @@ export function Assets() {
         title="Assets"
         subtitle="Machines on client sites — photos, serials, warranties, provenance from POs"
         action={
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm text-gray-400 tabular-nums">{s.devices.length} devices</span>
             <ViewSwitcher modes={['gallery', 'list']} value={mode} onChange={setMode} />
+            <button
+              onClick={() => { setEditing(null); setFormOpen(true) }}
+              className="rounded-lg bg-blue-600 text-white text-sm font-medium px-4 py-2 hover:bg-blue-700"
+            >
+              + New device
+            </button>
           </div>
         }
       />
@@ -52,7 +73,13 @@ export function Assets() {
                     {dev.warrantyUntil ? (daysBetween(dev.warrantyUntil) > 0 ? 'in warranty' : 'expired') : 'no warranty'}
                   </Chip>
                 </div>
-                <div className="mt-1.5 text-[11px] text-gray-400 font-mono">{dev.serial}</div>
+                <div className="mt-1.5 flex items-center justify-between gap-1.5">
+                  <span className="text-[11px] text-gray-400 font-mono">{dev.serial}</span>
+                  <RowActions
+                    onEdit={() => { setEditing(dev); setFormOpen(true) }}
+                    onDelete={() => setRemoveTarget(dev)}
+                  />
+                </div>
               </div>
             </div>
           ))}
@@ -68,6 +95,7 @@ export function Assets() {
                 <th className="px-4 py-2.5 font-medium">Client</th>
                 <th className="px-4 py-2.5 font-medium">Serial</th>
                 <th className="px-4 py-2.5 font-medium">Warranty</th>
+                <th className="px-4 py-2.5" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -80,6 +108,14 @@ export function Assets() {
                     <Chip tone={warrantyTone(dev.warrantyUntil)}>
                       {dev.warrantyUntil ? `until ${dateShort(dev.warrantyUntil)}` : '—'}
                     </Chip>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end">
+                      <RowActions
+                        onEdit={() => { setEditing(dev); setFormOpen(true) }}
+                        onDelete={() => setRemoveTarget(dev)}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -97,6 +133,28 @@ export function Assets() {
           </div>
         </SectionCard>
       </div>
+
+      <FormModal
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        title={editing ? `Edit ${editing.kind}` : 'New device'}
+        fields={DEVICE_FIELDS}
+        submitLabel={editing ? 'Save changes' : 'Register device'}
+        initial={editing ? {
+          kind: editing.kind, clientName: editing.clientName, serial: editing.serial ?? '',
+          warrantyUntil: editing.warrantyUntil ? editing.warrantyUntil.slice(0, 10) : '',
+        } : undefined}
+        onSubmit={(vals) => (editing ? updateDevice(editing.id, vals) : createDevice(vals))}
+      />
+      <ConfirmModal
+        open={!!removeTarget}
+        onClose={() => setRemoveTarget(null)}
+        title={removeTarget ? `Remove ${removeTarget.kind}?` : ''}
+        danger
+        confirmLabel="Remove device"
+        message="Removes the machine from the register. Purchase-order cost history is untouched — the PO still shows what was bought."
+        onConfirm={() => (removeTarget ? deleteDevice(removeTarget.id) : { ok: false, error: 'Nothing selected.' })}
+      />
     </>
   )
 }

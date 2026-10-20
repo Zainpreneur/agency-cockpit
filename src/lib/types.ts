@@ -2,7 +2,7 @@
 
 export type LeadStatus =
   | 'discovered' | 'contacted' | 'demo_built' | 'demo_shared'
-  | 'proposal_sent' | 'negotiating' | 'won' | 'lost'
+  | 'proposal_sent' | 'negotiating' | 'won' | 'lost' | 'archived'
 
 export type Lead = {
   id: number
@@ -171,7 +171,7 @@ export type PurchaseOrder = {
 }
 
 export type Investor = { id: number; name: string; email: string; deployed: number; returned: number }
-export type TeamMember = { id: number; name: string; email: string; pending: number; paidYtd: number }
+export type TeamMember = { id: number; name: string; email: string; pending: number; paidYtd: number; status: 'active' | 'archived' }
 
 export type Credential = {
   id: number
@@ -224,6 +224,7 @@ export type Vendor = {
   phone: string
   email: string
   terms: string
+  status: 'active' | 'archived'
 }
 
 export type Project = {

@@ -2,8 +2,11 @@ import { useState } from 'react'
 import { PageHeader, SectionCard, EmptyRow, Stat } from '../components/Layout'
 import { StatusChip, Chip } from '../components/StatusChip'
 import { Modal } from '../components/Modal'
+import { FormModal, type FieldDef } from '../components/FormModal'
+import { ConfirmModal } from '../components/ConfirmModal'
+import { RowActions } from '../components/RowActions'
 import { ViewSwitcher, useViewMode, type ViewMode } from '../components/ViewSwitcher'
-import { useAppState, releasePayout } from '../lib/store'
+import { useAppState, releasePayout, createPayout, cancelPayout } from '../lib/store'
 import { money, dateShort } from '../lib/format'
 import type { Payout } from '../lib/types'
 
@@ -16,11 +19,53 @@ const COLUMNS: { key: string; label: string; statuses: string[]; hint: string }[
 
 const MODES: ViewMode[] = ['board', 'table']
 
+const PAYOUT_FIELDS: FieldDef[] = [
+  { key: 'payee', label: 'Payee', type: 'select', required: true, options: [] },
+  {
+    key: 'payeeRole', label: 'Role', type: 'select',
+    options: [
+      { value: 'team', label: 'Team' },
+      { value: 'investor', label: 'Investor' },
+    ],
+  },
+  {
+    key: 'kind', label: 'Kind', type: 'select',
+    options: [
+      { value: 'delivery', label: 'Delivery' },
+      { value: 'commission', label: 'Commission' },
+      { value: 'return', label: 'Return' },
+      { value: 'adjustment', label: 'Adjustment' },
+    ],
+  },
+  { key: 'amount', label: 'Amount (SAR)', type: 'number', required: true, min: 1 },
+  {
+    key: 'triggerInvoiceId', label: 'Trigger invoice', type: 'select', options: [],
+    hint: 'leave empty for an ad-hoc row; a trigger makes it blocked until the invoice pays',
+  },
+  { key: 'note', label: 'Note', placeholder: 'what this covers' },
+]
+
 export function Payouts() {
   const s = useAppState()
   const [confirm, setConfirm] = useState<Payout | null>(null)
   const [scope, setScope] = useState<'all' | 'team' | 'investor'>('all')
   const [mode, setMode] = useViewMode('payouts', MODES, 'board')
+  const [formOpen, setFormOpen] = useState(false)
+  const [cancelTarget, setCancelTarget] = useState<Payout | null>(null)
+
+  const payoutFields: FieldDef[] = PAYOUT_FIELDS.map((f) =>
+    f.key === 'payee'
+      ? {
+          ...f,
+          options: [
+            ...s.team.filter((m) => m.status === 'active').map((m) => ({ value: m.name, label: `${m.name} · team` })),
+            ...s.investors.map((i) => ({ value: i.name, label: `${i.name} · investor` })),
+          ],
+        }
+      : f.key === 'triggerInvoiceId'
+        ? { ...f, options: s.invoices.map((i) => ({ value: String(i.id), label: `${i.no} · ${i.clientName} (${i.status})` })) }
+        : f,
+  )
 
   const visible = s.payouts.filter((p) => scope === 'all' || p.payeeRole === scope)
   const blockedTotal = visible.filter((p) => p.status === 'blocked').reduce((a, p) => a + p.amount, 0)
@@ -62,6 +107,12 @@ export function Payouts() {
                 </button>
               ))}
             </div>
+            <button
+              onClick={() => setFormOpen(true)}
+              className="rounded-lg bg-blue-600 text-white text-sm font-medium px-4 py-2 hover:bg-blue-700"
+            >
+              + New payout
+            </button>
           </div>
         }
       />
@@ -115,6 +166,15 @@ export function Payouts() {
                         {p.status === 'paid' && p.paidAt && (
                           <span className="text-xs text-gray-400">released {dateShort(p.paidAt)}</span>
                         )}
+                        {p.status !== 'paid' && p.status !== 'cancelled' && (
+                          <button
+                            onClick={() => setCancelTarget(p)}
+                            className="ml-auto text-xs text-gray-400 hover:text-red-600"
+                            title="Cancel this payout row"
+                          >
+                            cancel
+                          </button>
+                        )}
                       </div>
                     </div>
                   )
@@ -154,7 +214,20 @@ export function Payouts() {
                     <td className="px-4 py-3 text-right tabular-nums font-semibold">{money(p.amount)}</td>
                     <td className="px-4 py-3"><StatusChip status={p.status} domain="payout" /></td>
                     <td className="px-4 py-3 text-xs text-gray-500">{invoice ? invoice.no : '—'}</td>
-                    <td className="px-4 py-3"><div className="flex justify-end">{releaseBtn(p)}</div></td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end items-center gap-1.5">
+                        {releaseBtn(p)}
+                        {p.status !== 'paid' && p.status !== 'cancelled' && (
+                          <button
+                            onClick={() => setCancelTarget(p)}
+                            title="Cancel payout"
+                            className="rounded-lg w-7 h-7 text-xs ring-1 ring-gray-300 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 )
               })}
@@ -199,6 +272,25 @@ export function Payouts() {
       </Modal>
 
       {visible.length === 0 && <EmptyRow text="No payouts in this scope." />}
+
+      <FormModal
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        title="New payout (ad-hoc)"
+        fields={payoutFields}
+        submitLabel="Create payout"
+        initial={{ payeeRole: 'team', kind: 'adjustment' }}
+        onSubmit={createPayout}
+      />
+      <ConfirmModal
+        open={!!cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        title={cancelTarget ? `Cancel payout — ${cancelTarget.payee}?` : ''}
+        danger
+        confirmLabel="Cancel payout"
+        message="Cancelling keeps the row with a cancelled status so the trail stays. Paid rows can't un-happen — money history is append-only."
+        onConfirm={() => (cancelTarget ? cancelPayout(cancelTarget.id) : { ok: false, error: 'Nothing selected.' })}
+      />
     </>
   )
 }

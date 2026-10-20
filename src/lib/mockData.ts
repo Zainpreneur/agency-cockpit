@@ -241,8 +241,8 @@ export const mockData: AppState = {
   ],
 
   team: [
-    { id: 1, name: 'Omar', email: 'omar@example.com', pending: 500, paidYtd: 8400 },
-    { id: 2, name: 'Khalid', email: 'khalid@example.com', pending: 800, paidYtd: 5200 },
+    { id: 1, name: 'Omar', email: 'omar@example.com', pending: 500, paidYtd: 8400, status: 'active' },
+    { id: 2, name: 'Khalid', email: 'khalid@example.com', pending: 800, paidYtd: 5200, status: 'active' },
   ],
 
   credentials: [
@@ -278,9 +278,9 @@ export const mockData: AppState = {
   ],
 
   vendors: [
-    { id: 1, name: 'Al-Rashid Trading', category: 'POS hardware', contactName: 'Tariq', phone: '+966 55 900 1122', email: 'sales@alrashidtrading.sa', terms: '50% advance · 30 days' },
-    { id: 2, name: 'TechSouq', category: 'Peripherals & accessories', contactName: 'Sami', phone: '+966 50 445 6677', email: 'sami@techsouq.sa', terms: 'On delivery' },
-    { id: 3, name: 'CloudHost Arabia', category: 'Hosting & VPS', contactName: 'Dana', phone: '+966 54 220 8899', email: 'dana@cloudhost.sa', terms: 'Prepaid yearly' },
+    { id: 1, name: 'Al-Rashid Trading', category: 'POS hardware', contactName: 'Tariq', phone: '+966 55 900 1122', email: 'sales@alrashidtrading.sa', terms: '50% advance · 30 days', status: 'active' },
+    { id: 2, name: 'TechSouq', category: 'Peripherals & accessories', contactName: 'Sami', phone: '+966 50 445 6677', email: 'sami@techsouq.sa', terms: 'On delivery', status: 'active' },
+    { id: 3, name: 'CloudHost Arabia', category: 'Hosting & VPS', contactName: 'Dana', phone: '+966 54 220 8899', email: 'dana@cloudhost.sa', terms: 'Prepaid yearly', status: 'active' },
   ],
 
   projects: [

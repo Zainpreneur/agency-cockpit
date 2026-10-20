@@ -5,11 +5,22 @@ import { Chip, StatusChip } from '../components/StatusChip'
 import { PasteReplyModal } from '../components/PasteReplyModal'
 import { SendEmailModal } from '../components/SendEmailModal'
 import { CascadeConfirmModal } from '../components/CascadeConfirmModal'
-import { useAppState } from '../lib/store'
+import { FormModal, type FieldDef } from '../components/FormModal'
+import { useAppState, updateClient } from '../lib/store'
 import { money, dateShort, dueLabel, daysBetween } from '../lib/format'
 import type { Invoice, OutboxItem } from '../lib/types'
 
 const STATUS_TONE = { active: 'green', delivered: 'blue', archived: 'gray' } as const
+
+const CLIENT_FIELDS: FieldDef[] = [
+  { key: 'name', label: 'Client name', required: true },
+  { key: 'contactName', label: 'Contact person', required: true },
+  { key: 'email', label: 'Email', type: 'email' },
+  { key: 'phone', label: 'Phone', type: 'tel' },
+  { key: 'city', label: 'City' },
+  { key: 'industry', label: 'Industry' },
+  { key: 'notes', label: 'Notes', type: 'textarea', rows: 2 },
+]
 
 /** 360° view (doc 25): everything about one client on one screen —
  * projects, money, messages, quotes, machines, deployments. */
@@ -20,6 +31,7 @@ export function ClientDetail() {
   const [sendItem, setSendItem] = useState<OutboxItem | null>(null)
   const [payInvoice, setPayInvoice] = useState<Invoice | null>(null)
   const [pasteOpen, setPasteOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
 
   if (!client) {
     return (
@@ -59,8 +71,11 @@ export function ClientDetail() {
         title={name}
         subtitle={`${client.contactName} · ${client.industry} · ${client.city} · client since ${dateShort(client.since)}`}
         action={
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Link to="/clients" className="rounded-lg border border-gray-300 text-sm font-medium px-4 py-2 hover:bg-gray-50">← Clients</Link>
+            <button onClick={() => setEditOpen(true)} className="rounded-lg border border-gray-300 text-sm font-medium px-4 py-2 hover:bg-gray-50">
+              ✎ Edit
+            </button>
             <button onClick={() => setPasteOpen(true)} className="rounded-lg bg-gray-900 text-white text-sm font-medium px-4 py-2 hover:bg-gray-800">
               Paste reply
             </button>
@@ -247,6 +262,18 @@ export function ClientDetail() {
       <PasteReplyModal lead={pasteOpen ? { businessName: name } : null} onClose={() => setPasteOpen(false)} />
       <SendEmailModal item={sendItem} onClose={() => setSendItem(null)} />
       <CascadeConfirmModal invoice={payInvoice} onClose={() => setPayInvoice(null)} />
+      <FormModal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        title={`Edit ${name}`}
+        fields={CLIENT_FIELDS}
+        submitLabel="Save changes"
+        initial={{
+          name: client.name, contactName: client.contactName, email: client.email,
+          phone: client.phone, city: client.city, industry: client.industry, notes: client.notes ?? '',
+        }}
+        onSubmit={(vals) => updateClient(client.id, vals)}
+      />
     </>
   )
 }

@@ -1,15 +1,34 @@
 import { useState } from 'react'
 import { PageHeader, SectionCard, EmptyRow } from '../components/Layout'
 import { Chip } from '../components/StatusChip'
-import { useAppState } from '../lib/store'
-import { money } from '../lib/format'
+import { FormModal, type FieldDef } from '../components/FormModal'
+import { ConfirmModal } from '../components/ConfirmModal'
+import { RowActions } from '../components/RowActions'
+import { useAppState, createTemplate, updateTemplate, deleteTemplate } from '../lib/store'
+import type { CommsTemplate } from '../lib/types'
 
 const STAKEHOLDERS = ['all', 'lead', 'client', 'team', 'investor', 'vendor'] as const
+
+const TEMPLATE_FIELDS: FieldDef[] = [
+  { key: 'code', label: 'Code', required: true, placeholder: 'invoice_reminder_1', hint: 'lowercase, underscores' },
+  {
+    key: 'stakeholder', label: 'Stakeholder', type: 'select',
+    options: STAKEHOLDERS.filter((x) => x !== 'all').map((x) => ({ value: x, label: x })),
+  },
+  { key: 'stage', label: 'Stage', placeholder: 'manual · day 3 · after invoice…' },
+  { key: 'subject', label: 'Subject', required: true },
+  { key: 'body', label: 'Body', type: 'textarea', rows: 8, required: true, hint: 'merge fields: {name} {amount} {invoice_no}…' },
+  { key: 'followupTemplateCode', label: 'Follow-up template code', hint: 'optional — chains schedule the next send' },
+  { key: 'followupAfterDays', label: 'Follow-up after (days)', type: 'number', min: 0 },
+]
 
 export function Templates() {
   const s = useAppState()
   const [filter, setFilter] = useState<(typeof STAKEHOLDERS)[number]>('all')
   const [openCode, setOpenCode] = useState<string | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<CommsTemplate | null>(null)
+  const [removeTarget, setRemoveTarget] = useState<CommsTemplate | null>(null)
 
   const list = s.commsTemplates.filter((t) => filter === 'all' || t.stakeholder === filter)
 
@@ -19,18 +38,26 @@ export function Templates() {
         title="Templates"
         subtitle="Plain-language email templates with follow-up chains — every outbox row renders one"
         action={
-          <div className="flex flex-wrap gap-1">
-            {STAKEHOLDERS.map((x) => (
-              <button
-                key={x}
-                onClick={() => setFilter(x)}
-                className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset capitalize ${
-                  filter === x ? 'bg-gray-900 text-white ring-gray-900' : 'bg-white text-gray-600 ring-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                {x}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap gap-1">
+              {STAKEHOLDERS.map((x) => (
+                <button
+                  key={x}
+                  onClick={() => setFilter(x)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset capitalize ${
+                    filter === x ? 'bg-gray-900 text-white ring-gray-900' : 'bg-white text-gray-600 ring-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {x}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => { setEditing(null); setFormOpen(true) }}
+              className="rounded-lg bg-blue-600 text-white text-sm font-medium px-4 py-2 hover:bg-blue-700"
+            >
+              + New template
+            </button>
           </div>
         }
       />
@@ -76,6 +103,12 @@ export function Templates() {
                       </span>
                     ))}
                     {chain.length === 0 && <span className="text-gray-400">· end of chain (no auto follow-up)</span>}
+                    <span className="ml-auto">
+                      <RowActions
+                        onEdit={() => { setEditing(t); setFormOpen(true) }}
+                        onDelete={() => setRemoveTarget(t)}
+                      />
+                    </span>
                   </div>
                 </div>
               )}
@@ -106,6 +139,30 @@ export function Templates() {
           </p>
         </div>
       </div>
+
+      <FormModal
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        title={editing ? `Edit ${editing.code}` : 'New template'}
+        fields={editing ? TEMPLATE_FIELDS.filter((f) => f.key !== 'code') : TEMPLATE_FIELDS}
+        submitLabel={editing ? 'Save changes' : 'Create template'}
+        initial={editing ? {
+          code: editing.code, stakeholder: editing.stakeholder, stage: editing.stage,
+          subject: editing.subject, body: editing.body,
+          followupTemplateCode: editing.followupTemplateCode ?? '',
+          followupAfterDays: editing.followupAfterDays ?? 0,
+        } : { stakeholder: 'lead', followupAfterDays: 0 }}
+        onSubmit={(vals) => (editing ? updateTemplate(editing.code, vals) : createTemplate(vals))}
+      />
+      <ConfirmModal
+        open={!!removeTarget}
+        onClose={() => setRemoveTarget(null)}
+        title={removeTarget ? `Delete ${removeTarget.code}?` : ''}
+        danger
+        confirmLabel="Delete template"
+        message="Only templates with nothing queued in the outbox can be deleted — skip or send those rows first."
+        onConfirm={() => (removeTarget ? deleteTemplate(removeTarget.code) : { ok: false, error: 'Nothing selected.' })}
+      />
     </>
   )
 }

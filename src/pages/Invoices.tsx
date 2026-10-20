@@ -3,14 +3,27 @@ import { PageHeader, Stat } from '../components/Layout'
 import { StatusChip, Chip } from '../components/StatusChip'
 import { SendEmailModal } from '../components/SendEmailModal'
 import { CascadeConfirmModal } from '../components/CascadeConfirmModal'
+import { FormModal, type FieldDef } from '../components/FormModal'
+import { ConfirmModal } from '../components/ConfirmModal'
+import { RowActions } from '../components/RowActions'
 import { ViewSwitcher, useViewMode, type ViewMode } from '../components/ViewSwitcher'
 import { CalendarBoard } from '../components/CalendarBoard'
-import { useAppState, cascadePreview, sendInvoice } from '../lib/store'
+import {
+  useAppState, cascadePreview, sendInvoice,
+  createInvoice, updateInvoice, voidInvoice, deleteInvoice,
+} from '../lib/store'
 import { money, dateShort, dueLabel, dueTone, daysBetween } from '../lib/format'
 import type { Invoice, OutboxItem } from '../lib/types'
 
 const ORDER: Record<string, number> = { overdue: 0, sent: 1, viewed: 2, draft: 3, paid: 9, void: 9 }
 const MODES: ViewMode[] = ['table', 'list', 'cards', 'calendar']
+
+const INVOICE_FIELDS: FieldDef[] = [
+  { key: 'clientName', label: 'Client', type: 'select', required: true, options: [] },
+  { key: 'total', label: 'Total (SAR)', type: 'number', required: true, min: 1 },
+  { key: 'dueIn', label: 'Due in (days)', type: 'number', min: 0, hint: 'defaults to 14' },
+  { key: 'proposalNo', label: 'From proposal', type: 'select', options: [] },
+]
 
 function actionsFor(
   inv: Invoice,
@@ -59,6 +72,18 @@ export function Invoices() {
   const [payInvoice, setPayInvoice] = useState<Invoice | null>(null)
   const [remind, setRemind] = useState<OutboxItem | null>(null)
   const [mode, setMode] = useViewMode('invoices', MODES, 'table')
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<Invoice | null>(null)
+  const [voidTarget, setVoidTarget] = useState<Invoice | null>(null)
+  const [removeTarget, setRemoveTarget] = useState<Invoice | null>(null)
+
+  const invoiceFields: FieldDef[] = INVOICE_FIELDS.map((f) =>
+    f.key === 'clientName'
+      ? { ...f, options: s.clients.map((c) => ({ value: c.name, label: c.name })) }
+      : f.key === 'proposalNo'
+        ? { ...f, options: s.proposals.map((p) => ({ value: p.no, label: `${p.no} · ${p.leadName}` })) }
+        : f,
+  )
 
   const rows = useMemo(() => {
     return [...s.invoices].sort((a, b) => {
@@ -83,8 +108,8 @@ export function Invoices() {
           <div className="flex flex-wrap items-center gap-3">
             <ViewSwitcher modes={MODES} value={mode} onChange={setMode} />
             <button
-              className="rounded-lg border border-gray-300 text-sm font-medium px-4 py-2 hover:bg-gray-50"
-              title="Comes from an accepted proposal or module order in the real build"
+              onClick={() => { setEditing(null); setFormOpen(true) }}
+              className="rounded-lg bg-blue-600 text-white text-sm font-medium px-4 py-2 hover:bg-blue-700"
             >
               + New invoice
             </button>
@@ -141,7 +166,21 @@ export function Invoices() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex justify-end gap-1.5">{actionsFor(inv, setPayInvoice, setRemind)}</div>
+                      <div className="flex justify-end items-center gap-1.5">
+                        {actionsFor(inv, setPayInvoice, setRemind)}
+                        <RowActions
+                          onEdit={inv.status === 'draft' ? () => { setEditing(inv); setFormOpen(true) } : undefined}
+                          extra={inv.status === 'paid' || inv.status === 'void' ? undefined : (
+                            <button
+                              onClick={() => (inv.status === 'draft' ? setRemoveTarget(inv) : setVoidTarget(inv))}
+                              title={inv.status === 'draft' ? 'Delete draft' : 'Void invoice'}
+                              className="rounded-lg w-7 h-7 text-xs ring-1 ring-gray-300 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        />
+                      </div>
                     </td>
                   </tr>
                 )
@@ -168,6 +207,18 @@ export function Invoices() {
               <span className="text-sm font-semibold tabular-nums">{money(inv.total)}</span>
               <StatusChip status={inv.status} domain="invoice" />
               {actionsFor(inv, setPayInvoice, setRemind)}
+              <RowActions
+                onEdit={inv.status === 'draft' ? () => { setEditing(inv); setFormOpen(true) } : undefined}
+                extra={inv.status === 'paid' || inv.status === 'void' ? undefined : (
+                  <button
+                    onClick={() => (inv.status === 'draft' ? setRemoveTarget(inv) : setVoidTarget(inv))}
+                    title={inv.status === 'draft' ? 'Delete draft' : 'Void invoice'}
+                    className="rounded-lg w-7 h-7 text-xs ring-1 ring-gray-300 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                  >
+                    ✕
+                  </button>
+                )}
+              />
             </div>
           ))}
         </div>
@@ -198,8 +249,22 @@ export function Invoices() {
                     unlocks: {unlocks.map((u) => u.payee).join(', ')}
                   </div>
                 )}
-                <div className="mt-3 pt-3 border-t border-gray-50 flex flex-wrap gap-1.5">
+                <div className="mt-3 pt-3 border-t border-gray-50 flex flex-wrap gap-1.5 items-center">
                   {actionsFor(inv, setPayInvoice, setRemind)}
+                  <span className="ml-auto">
+                    <RowActions
+                      onEdit={inv.status === 'draft' ? () => { setEditing(inv); setFormOpen(true) } : undefined}
+                      extra={inv.status === 'paid' || inv.status === 'void' ? undefined : (
+                        <button
+                          onClick={() => (inv.status === 'draft' ? setRemoveTarget(inv) : setVoidTarget(inv))}
+                          title={inv.status === 'draft' ? 'Delete draft' : 'Void invoice'}
+                          className="rounded-lg w-7 h-7 text-xs ring-1 ring-gray-300 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    />
+                  </span>
                 </div>
               </div>
             )
@@ -227,6 +292,37 @@ export function Invoices() {
 
       <SendEmailModal item={remind} onClose={() => setRemind(null)} />
       <CascadeConfirmModal invoice={payInvoice} onClose={() => setPayInvoice(null)} />
+
+      <FormModal
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        title={editing ? `Edit ${editing.no}` : 'New invoice'}
+        fields={editing ? invoiceFields.filter((f) => f.key !== 'clientName') : invoiceFields}
+        submitLabel={editing ? 'Save draft' : 'Create draft'}
+        initial={editing ? {
+          clientName: editing.clientName, total: editing.total,
+          dueIn: Math.max(0, Math.round(-daysBetween(editing.dueAt))),
+        } : { dueIn: 14, total: 0 }}
+        onSubmit={(vals) => (editing ? updateInvoice(editing.id, vals) : createInvoice(vals))}
+      />
+      <ConfirmModal
+        open={!!voidTarget}
+        onClose={() => setVoidTarget(null)}
+        title={voidTarget ? `Void ${voidTarget.no}?` : ''}
+        danger
+        confirmLabel="Void invoice"
+        message="Voiding keeps the number in the books with a void status — drafts get deleted, sent paperwork gets voided, paid rows never move. Issue a replacement invoice if the amount was wrong."
+        onConfirm={() => (voidTarget ? voidInvoice(voidTarget.id) : { ok: false, error: 'Nothing selected.' })}
+      />
+      <ConfirmModal
+        open={!!removeTarget}
+        onClose={() => setRemoveTarget(null)}
+        title={removeTarget ? `Delete ${removeTarget.no}?` : ''}
+        danger
+        confirmLabel="Delete draft"
+        message="Drafts were never sent, so deleting is safe. Nothing in the books changes."
+        onConfirm={() => (removeTarget ? deleteInvoice(removeTarget.id) : { ok: false, error: 'Nothing selected.' })}
+      />
     </>
   )
 }
