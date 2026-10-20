@@ -251,21 +251,45 @@ export function Projects() {
           }
         >
           {s.deployTargets.length === 0 && <div className="px-4 py-6 text-sm text-gray-400 text-center">No deploy targets yet.</div>}
-          {s.deployTargets.map((t) => (
-            <div key={t.id} className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-0">
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold text-gray-900 font-mono">{t.name}</div>
-                <div className="text-xs text-gray-500">{t.clientName} · {t.provider.replace('_', ' ')} · {t.env} · {t.version}</div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3">
+            {s.deployTargets.map((t) => (
+              <div key={t.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold text-gray-900 font-mono truncate">{t.name}</div>
+                    <div className="text-xs text-gray-500">{t.clientName} · {t.provider.replace('_', ' ')} · {t.env} · {t.version}</div>
+                  </div>
+                  <StatusChip status={t.status} />
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  {t.behindBy > 0 && <Chip tone="amber" title="Commits behind the deployed tag">{t.behindBy} behind</Chip>}
+                  <span className="text-xs text-gray-400 ml-auto">{t.lastDeployAt ? `deployed ${dateShort(t.lastDeployAt)}` : 'never'}</span>
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-gray-50 flex items-center gap-2">
+                  <button
+                    onClick={() => { setEditDeploy(t); setDeployOpen(true) }}
+                    className="rounded-lg border border-gray-300 text-xs font-medium px-2.5 py-1 hover:bg-gray-50"
+                  >
+                    Edit
+                  </button>
+                  {t.status === 'healthy' && t.lastDeployAt && (
+                    <button
+                      className="rounded-lg border border-red-300 text-red-600 text-xs font-medium px-2.5 py-1 hover:bg-red-50"
+                      title="Rollback to previous version"
+                    >
+                      Rollback
+                    </button>
+                  )}
+                  <RowActions
+                    onEdit={() => { setEditDeploy(t); setDeployOpen(true) }}
+                    onDelete={() => setDeployRemove(t)}
+                  />
+                </div>
               </div>
-              {t.behindBy > 0 && <Chip tone="amber" title="Commits behind the deployed tag">{t.behindBy} behind</Chip>}
-              <StatusChip status={t.status} />
-              <span className="text-xs text-gray-400">{t.lastDeployAt ? `deployed ${dateShort(t.lastDeployAt)}` : 'never'}</span>
-              <RowActions
-                onEdit={() => { setEditDeploy(t); setDeployOpen(true) }}
-                onDelete={() => setDeployRemove(t)}
-              />
-            </div>
-          ))}
+            ))}
+          </div>
         </SectionCard>
 
         <SectionCard

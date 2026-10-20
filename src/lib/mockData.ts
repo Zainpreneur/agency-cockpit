@@ -318,4 +318,48 @@ export const mockData: AppState = {
       enrolled: 9, replied: 1,
     },
   ],
+
+  moduleOrders: [
+    {
+      id: 1, name: 'Booking module v2', clientName: 'Gulf Spa', projectName: 'Gulf Spa booking site',
+      price: 8000, fee: 500, assignee: 'Omar', status: 'staging',
+      prUrl: 'https://github.com/zainpreneur/gulf-spa-booking/pull/12',
+      spec: 'Calendar sync · staff roles · package upsells',
+      createdAt: d(-14), updatedAt: d(-1),
+    },
+    {
+      id: 2, name: 'Loyalty add-on', clientName: 'Alnoor Hotel', projectName: 'Alnoor POS deployment',
+      price: 12000, fee: 800, assignee: 'Khalid', status: 'code_review',
+      prUrl: 'https://github.com/zainpreneur/alnoor-pos/pull/7',
+      spec: 'Points per SAR · tier rewards · birthday bonus',
+      createdAt: d(-10), updatedAt: d(-2),
+    },
+    {
+      id: 3, name: 'Menu management', clientName: 'Ocean Treats', projectName: 'Ocean Treats menu site',
+      price: 5000, fee: 400, assignee: 'Omar', status: 'building',
+      spec: 'Categories · allergens · daily specials · QR menu',
+      createdAt: d(-7), updatedAt: d(-1),
+    },
+    {
+      id: 4, name: 'Multi-branch dashboard', clientName: 'Desert Carwash', projectName: 'Desert Carwash booking module',
+      price: 15000, fee: 1000, assignee: 'Khalid', status: 'requested',
+      spec: '15 branches · consolidated reporting · per-branch staff',
+      createdAt: d(-3), updatedAt: d(-3),
+    },
+    {
+      id: 5, name: 'WhatsApp notifications', clientName: 'Aqua Pets', projectName: 'Aqua Pets booking site',
+      price: 3000, fee: 300, assignee: 'Omar', status: 'spec_approved',
+      spec: 'Booking confirm · reminder · review request',
+      createdAt: d(-5), updatedAt: d(-4),
+    },
+  ],
+
+  tickets: [
+    { id: 1, subject: 'POS printer not cutting receipts', clientName: 'Alnoor Hotel', projectName: 'Alnoor POS deployment', priority: 'high', status: 'in_progress', assignee: 'Omar', createdAt: d(-2), updatedAt: d(-1), notes: 'Thermal head cleaning needed — parts ordered' },
+    { id: 2, subject: 'Booking confirmation email not sending', clientName: 'Gulf Spa', projectName: 'Gulf Spa booking site', priority: 'normal', status: 'open', assignee: 'Khalid', createdAt: d(-1), updatedAt: d(-1), notes: 'SMTP config issue suspected' },
+    { id: 3, subject: 'Menu images not loading on mobile', clientName: 'Ocean Treats', projectName: 'Ocean Treats menu site', priority: 'high', status: 'in_progress', assignee: 'Omar', createdAt: d(-3), updatedAt: d(-2), notes: 'CDN cache invalidation needed' },
+    { id: 4, subject: 'Branch selector missing on mobile', clientName: 'Desert Carwash', projectName: 'Desert Carwash booking module', priority: 'normal', status: 'waiting_client', assignee: 'Khalid', createdAt: d(-5), updatedAt: d(-3), notes: 'Waiting for client feedback on UX mockup' },
+    { id: 5, subject: 'WhatsApp template rejected by Meta', clientName: 'Aqua Pets', projectName: 'Aqua Pets booking site', priority: 'urgent', status: 'open', assignee: 'Omar', createdAt: d(-0.5), updatedAt: d(-0.5), notes: 'Need to resubmit with updated footer' },
+    { id: 6, subject: 'Invoice INV-38 payment mismatch', clientName: 'Desert Carwash', projectName: 'Desert Carwash booking module', priority: 'high', status: 'resolved', assignee: 'Khalid', createdAt: d(-10), updatedAt: d(-8), notes: 'Partial payment — balance collected' },
+  ],
 }

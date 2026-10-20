@@ -22,6 +22,10 @@ import { Calendar } from './pages/Calendar'
 import { Settings } from './pages/Settings'
 import { ProjectDetail } from './pages/ProjectDetail'
 import { InvestorDetail } from './pages/InvestorDetail'
+import { ModuleOrders } from './pages/ModuleOrders'
+import { Tickets } from './pages/Tickets'
+import { ClientRepos } from './pages/ClientRepos'
+import { UpdatePRs } from './pages/UpdatePRs'
 import { CommandPalette, useCommandPalette } from './components/CommandPalette'
 
 type NavItem = { to: string; label: string; exact?: boolean }
@@ -40,8 +44,12 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
   { title: '', items: [{ to: '/clients', label: '👥 Clients' }] },
   { title: 'Delivery', items: [
     { to: '/projects', label: 'Projects' },
+    { to: '/module-orders', label: 'Module Orders' },
+    { to: '/tickets', label: 'Tickets' },
     { to: '/vendors', label: 'Vendors' },
     { to: '/assets', label: 'Assets' },
+    { to: '/client-repos', label: 'Client Repos' },
+    { to: '/update-prs', label: 'Update PRs' },
   ]},
   { title: 'Money', items: [
     { to: '/money/invoices', label: 'Invoices' },
@@ -127,8 +135,12 @@ export function App() {
             <Route path="/clients/:id" element={<ClientDetail />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
+            <Route path="/module-orders" element={<ModuleOrders />} />
+            <Route path="/tickets" element={<Tickets />} />
             <Route path="/vendors" element={<Vendors />} />
             <Route path="/assets" element={<Assets />} />
+            <Route path="/client-repos" element={<ClientRepos />} />
+            <Route path="/update-prs" element={<UpdatePRs />} />
             <Route path="/money/invoices" element={<Invoices />} />
             <Route path="/money/payouts" element={<Payouts />} />
             <Route path="/people" element={<People />} />

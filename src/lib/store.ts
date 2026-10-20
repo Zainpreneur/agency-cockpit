@@ -12,6 +12,7 @@
 import { useSyncExternalStore } from 'react'
 import type {
   AppState, CommsEntry, Invoice, OutboxItem, Payout, Proposal, ProposalStatus, StatusEvent,
+  ModuleOrder, ModuleOrderStatus, Ticket, TicketPriority, TicketStatus,
 } from './types'
 import { mockData } from './mockData'
 import { d, money } from './format'
@@ -1506,6 +1507,218 @@ export function deleteDevice(id: number): ActionResult {
     let next: AppState = { ...s, devices: s.devices.filter((x) => x.id !== id) }
     next = ev(next, 'device', id, 'on_site', 'removed', `${dev.kind} @ ${dev.clientName}`)
     res = OK(id)
+    return next
+  })
+  return res
+}
+
+// ── Module Orders (doc 14, 25) ──────────────────────────────────────────
+// Board: requested → spec_approved → building → code_review → staging → deployed → invoiced
+
+const MODULE_ORDER_COLUMNS: ModuleOrderStatus[] = [
+  'requested', 'spec_approved', 'building', 'code_review', 'staging', 'deployed', 'invoiced',
+]
+
+function nextModuleStatus(status: ModuleOrderStatus): ModuleOrderStatus | null {
+  const idx = MODULE_ORDER_COLUMNS.indexOf(status)
+  return idx >= 0 && idx < MODULE_ORDER_COLUMNS.length - 1 ? MODULE_ORDER_COLUMNS[idx + 1] : null
+}
+
+export function createModuleOrder(v: Vals): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const project = s.projects.find((p) => p.name === S(v, 'projectName'))
+    if (!project) return void (res = FAIL('Project not found.'))
+    const client = s.clients.find((c) => c.name === project.clientName)
+    if (!client) return void (res = FAIL('Client not found.'))
+    const id = s.seq + 1
+    const now = new Date().toISOString()
+    const mo: ModuleOrder = {
+      id,
+      name: S(v, 'name') || 'Untitled module',
+      clientName: client.name,
+      projectName: project.name,
+      price: N(v, 'price'),
+      fee: N(v, 'fee'),
+      assignee: S(v, 'assignee') || undefined,
+      status: 'requested',
+      spec: S(v, 'spec') || undefined,
+      createdAt: now,
+      updatedAt: now,
+    }
+    let next: AppState = { ...s, seq: s.seq + 1, moduleOrders: [...s.moduleOrders, mo] }
+    next = ev(next, 'module_order', id, 'new', 'requested', mo.name)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function updateModuleOrder(id: number, v: Vals): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const mo = s.moduleOrders.find((x) => x.id === id)
+    if (!mo) return void (res = FAIL('Module order not found.'))
+    const from = mo.status
+    let next: AppState = {
+      ...s,
+      moduleOrders: s.moduleOrders.map((x) => (x.id === id ? {
+        ...x,
+        name: S(v, 'name') || x.name,
+        price: N(v, 'price') || x.price,
+        fee: N(v, 'fee') || x.fee,
+        assignee: S(v, 'assignee') || x.assignee,
+        status: (S(v, 'status') as ModuleOrderStatus) || x.status,
+        spec: S(v, 'spec') ?? x.spec,
+        prUrl: S(v, 'prUrl') ?? x.prUrl,
+        updatedAt: new Date().toISOString(),
+      } : x)),
+    }
+    const to = (S(v, 'status') as ModuleOrderStatus) || mo.status
+    if (to !== from) next = ev(next, 'module_order', id, from, to, mo.name)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function advanceModuleOrder(id: number): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const mo = s.moduleOrders.find((x) => x.id === id)
+    if (!mo) return void (res = FAIL('Module order not found.'))
+    const nextStatus = nextModuleStatus(mo.status)
+    if (!nextStatus) return void (res = FAIL('Already at final status.'))
+    let next: AppState = {
+      ...s,
+      moduleOrders: s.moduleOrders.map((x) => (x.id === id ? { ...x, status: nextStatus, updatedAt: new Date().toISOString() } : x)),
+    }
+    next = ev(next, 'module_order', id, mo.status, nextStatus, mo.name)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function deleteModuleOrder(id: number): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const mo = s.moduleOrders.find((x) => x.id === id)
+    if (!mo) return void (res = FAIL('Module order not found.'))
+    if (mo.status !== 'requested' && mo.status !== 'cancelled') {
+      return void (res = FAIL('Only requested or cancelled module orders can be deleted.'))
+    }
+    let next: AppState = { ...s, moduleOrders: s.moduleOrders.filter((x) => x.id !== id) }
+    next = ev(next, 'module_order', id, mo.status, 'deleted', mo.name)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+// ── Tickets (doc 25) ────────────────────────────────────────────────────
+
+export function createTicket(v: Vals): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const id = s.seq + 1
+    const now = new Date().toISOString()
+    const t: Ticket = {
+      id,
+      subject: S(v, 'subject') || 'Untitled ticket',
+      clientName: S(v, 'clientName') || 'Unknown client',
+      projectName: S(v, 'projectName') || undefined,
+      priority: (S(v, 'priority') as TicketPriority) || 'normal',
+      status: 'open',
+      assignee: S(v, 'assignee') || undefined,
+      notes: S(v, 'notes') || undefined,
+      createdAt: now,
+      updatedAt: now,
+    }
+    let next: AppState = { ...s, seq: s.seq + 1, tickets: [...s.tickets, t] }
+    next = ev(next, 'ticket', id, 'new', 'open', t.subject)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function updateTicket(id: number, v: Vals): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const t = s.tickets.find((x) => x.id === id)
+    if (!t) return void (res = FAIL('Ticket not found.'))
+    const from = t.status
+    let next: AppState = {
+      ...s,
+      tickets: s.tickets.map((x) => (x.id === id ? {
+        ...x,
+        subject: S(v, 'subject') || x.subject,
+        clientName: S(v, 'clientName') || x.clientName,
+        projectName: S(v, 'projectName') ?? x.projectName,
+        priority: (S(v, 'priority') as TicketPriority) || x.priority,
+        status: (S(v, 'status') as TicketStatus) || x.status,
+        assignee: S(v, 'assignee') ?? x.assignee,
+        notes: S(v, 'notes') ?? x.notes,
+        updatedAt: new Date().toISOString(),
+      } : x)),
+    }
+    const to = (S(v, 'status') as TicketStatus) || t.status
+    if (to !== from) next = ev(next, 'ticket', id, from, to, t.subject)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function deleteTicket(id: number): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const t = s.tickets.find((x) => x.id === id)
+    if (!t) return void (res = FAIL('Ticket not found.'))
+    let next: AppState = { ...s, tickets: s.tickets.filter((x) => x.id !== id) }
+    next = ev(next, 'ticket', id, t.status, 'deleted', t.subject)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+// Convert ticket → module order (doc 25: "convert → module order")
+export function convertTicketToModuleOrder(ticketId: number, v: Vals): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const t = s.tickets.find((x) => x.id === ticketId)
+    if (!t) return void (res = FAIL('Ticket not found.'))
+    if (t.status === 'closed' || t.status === 'resolved') {
+      return void (res = FAIL('Closed/resolved tickets cannot be converted.'))
+    }
+    const project = s.projects.find((p) => p.name === t.projectName)
+    if (!project) return void (res = FAIL('Project not found.'))
+    const moId = s.seq + 1
+    const now = new Date().toISOString()
+    const mo: ModuleOrder = {
+      id: moId,
+      name: S(v, 'name') || t.subject,
+      clientName: t.clientName,
+      projectName: project.name,
+      price: N(v, 'price'),
+      fee: N(v, 'fee'),
+      assignee: S(v, 'assignee') || t.assignee,
+      status: 'requested',
+      spec: S(v, 'spec') || t.notes,
+      createdAt: now,
+      updatedAt: now,
+    }
+    let next: AppState = {
+      ...s,
+      seq: s.seq + 1,
+      moduleOrders: [...s.moduleOrders, mo],
+      tickets: s.tickets.map((x) => (x.id === ticketId ? { ...x, status: 'resolved' as TicketStatus, updatedAt: now } : x)),
+    }
+    next = ev(next, 'module_order', moId, 'new', 'requested', `converted from ticket #${ticketId}: ${t.subject}`)
+    next = ev(next, 'ticket', ticketId, t.status, 'resolved', `converted to module order: ${mo.name}`)
+    res = OK(moId)
     return next
   })
   return res

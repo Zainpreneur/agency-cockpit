@@ -248,6 +248,41 @@ export type Campaign = {
   replied: number
 }
 
+export type ModuleOrderStatus =
+  | 'requested' | 'spec_approved' | 'building' | 'code_review'
+  | 'staging' | 'deployed' | 'invoiced' | 'cancelled'
+
+export type ModuleOrder = {
+  id: number
+  name: string
+  clientName: string
+  projectName: string
+  price: number
+  fee: number
+  assignee?: string
+  status: ModuleOrderStatus
+  prUrl?: string
+  spec?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type TicketPriority = 'low' | 'normal' | 'high' | 'urgent'
+export type TicketStatus = 'open' | 'in_progress' | 'waiting_client' | 'resolved' | 'closed'
+
+export type Ticket = {
+  id: number
+  subject: string
+  clientName: string
+  projectName?: string
+  priority: TicketPriority
+  status: TicketStatus
+  assignee?: string
+  createdAt: string
+  updatedAt: string
+  notes?: string
+}
+
 export type AppState = {
   seq: number
   leads: Lead[]
@@ -272,4 +307,6 @@ export type AppState = {
   vendors: Vendor[]
   projects: Project[]
   campaigns: Campaign[]
+  moduleOrders: ModuleOrder[]
+  tickets: Ticket[]
 }
