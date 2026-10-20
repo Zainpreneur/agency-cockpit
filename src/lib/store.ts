@@ -11,7 +11,7 @@
 
 import { useSyncExternalStore } from 'react'
 import type {
-  AppState, CommsEntry, Invoice, OutboxItem, Payout, Proposal, StatusEvent,
+  AppState, CommsEntry, Invoice, OutboxItem, Payout, Proposal, ProposalStatus, StatusEvent,
 } from './types'
 import { mockData } from './mockData'
 import { d, money } from './format'
@@ -406,6 +406,20 @@ export function toggleCampaign(campaignId: number) {
         entity: 'campaign', entityId: campaignId, from: c.status, to,
       }),
     }
+    return { ...next, seq: next.seq + 1 }
+  })
+}
+
+/** Board/card move → proposal status flip with an append-only event (same path as drag). */
+export function moveProposalStatus(proposalId: number, to: string) {
+  setState((s) => {
+    const p = s.proposals.find((x) => x.id === proposalId)
+    if (!p || p.status === to) return
+    let next: AppState = {
+      ...s,
+      proposals: s.proposals.map((x) => (x.id === proposalId ? { ...x, status: to as ProposalStatus } : x)),
+    }
+    next = { ...next, statusEvents: withEvent({ ...next, seq: next.seq + 1 }, { entity: 'proposal', entityId: proposalId, from: p.status, to, note: p.no }) }
     return { ...next, seq: next.seq + 1 }
   })
 }

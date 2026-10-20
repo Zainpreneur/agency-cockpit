@@ -19,6 +19,8 @@ import { Outbox } from './pages/Outbox'
 import { Templates } from './pages/Templates'
 import { Calendar } from './pages/Calendar'
 import { Settings } from './pages/Settings'
+import { ProjectDetail } from './pages/ProjectDetail'
+import { InvestorDetail } from './pages/InvestorDetail'
 
 type NavItem = { to: string; label: string; exact?: boolean }
 
@@ -119,11 +121,13 @@ export function App() {
             <Route path="/clients" element={<Clients />} />
             <Route path="/clients/:id" element={<ClientDetail />} />
             <Route path="/projects" element={<Projects />} />
+            <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="/vendors" element={<Vendors />} />
             <Route path="/assets" element={<Assets />} />
             <Route path="/money/invoices" element={<Invoices />} />
             <Route path="/money/payouts" element={<Payouts />} />
             <Route path="/people" element={<People />} />
+            <Route path="/people/investors/:id" element={<InvestorDetail />} />
             <Route path="/comms/outbox" element={<Outbox />} />
             <Route path="/comms/templates" element={<Templates />} />
             <Route path="/calendar" element={<Calendar />} />

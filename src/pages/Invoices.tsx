@@ -8,6 +8,7 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { RowActions } from '../components/RowActions'
 import { ViewSwitcher, useViewMode, type ViewMode } from '../components/ViewSwitcher'
 import { CalendarBoard } from '../components/CalendarBoard'
+import { BulkActionsBar, SelectAllCheckbox, RowCheckbox } from '../components/BulkActions'
 import {
   useAppState, cascadePreview, sendInvoice,
   createInvoice, updateInvoice, voidInvoice, deleteInvoice,
@@ -76,6 +77,7 @@ export function Invoices() {
   const [editing, setEditing] = useState<Invoice | null>(null)
   const [voidTarget, setVoidTarget] = useState<Invoice | null>(null)
   const [removeTarget, setRemoveTarget] = useState<Invoice | null>(null)
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
 
   const invoiceFields: FieldDef[] = INVOICE_FIELDS.map((f) =>
     f.key === 'clientName'
@@ -98,6 +100,22 @@ export function Invoices() {
   const outstanding = open.reduce((a, i) => a + i.total, 0)
   const overdueTotal = s.invoices.filter((i) => i.status === 'overdue').reduce((a, i) => a + i.total, 0)
   const paidThisMonth = s.invoices.filter((i) => i.status === 'paid').reduce((a, i) => a + i.total, 0)
+
+  // Selection helpers
+  const allSelected = rows.length > 0 && selectedIds.length === rows.length
+  const someSelected = selectedIds.length > 0 && selectedIds.length < rows.length
+  const toggleAll = (checked: boolean) => setSelectedIds(checked ? rows.map((r) => r.id) : [])
+  const toggleRow = (id: number, checked: boolean) =>
+    setSelectedIds((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)))
+
+  const invoiceColumns = (inv: Invoice) => ({
+    Invoice: inv.no,
+    Client: inv.clientName,
+    Total: inv.total,
+    Aging: dueLabel(inv.dueAt, inv.paidAt),
+    Status: inv.status,
+    Proposal: inv.proposalNo ?? '',
+  })
 
   return (
     <>
@@ -129,6 +147,9 @@ export function Invoices() {
           <table className="w-full text-sm min-w-[720px]">
             <thead>
               <tr className="text-left text-xs text-gray-500 border-b border-gray-100">
+                <th className="px-4 py-2.5 font-medium w-10">
+                  <SelectAllCheckbox checked={allSelected} indeterminate={someSelected} onChange={toggleAll} />
+                </th>
                 <th className="px-4 py-2.5 font-medium">Invoice</th>
                 <th className="px-4 py-2.5 font-medium">Client</th>
                 <th className="px-4 py-2.5 font-medium text-right">Total</th>
@@ -142,8 +163,12 @@ export function Invoices() {
               {rows.map((inv) => {
                 const unlocks = cascadePreview(inv.id)
                 const agingDays = inv.status === 'paid' ? 0 : daysBetween(inv.dueAt)
+                const isSelected = selectedIds.includes(inv.id)
                 return (
-                  <tr key={inv.id} className="hover:bg-gray-50/70">
+                  <tr key={inv.id} className={`hover:bg-gray-50/70 ${isSelected ? 'bg-blue-50' : ''}`}>
+                    <td className="px-4 py-3">
+                      <RowCheckbox checked={isSelected} onChange={(c) => toggleRow(inv.id, c)} />
+                    </td>
                     <td className="px-4 py-3">
                       <div className="font-medium text-gray-900">{inv.no}</div>
                       {inv.proposalNo && <div className="text-xs text-gray-400">from {inv.proposalNo}</div>}
@@ -322,6 +347,14 @@ export function Invoices() {
         confirmLabel="Delete draft"
         message="Drafts were never sent, so deleting is safe. Nothing in the books changes."
         onConfirm={() => (removeTarget ? deleteInvoice(removeTarget.id) : { ok: false, error: 'Nothing selected.' })}
+      />
+
+      <BulkActionsBar
+        selectedIds={selectedIds}
+        allItems={rows}
+        onClearSelection={() => setSelectedIds([])}
+        getColumns={invoiceColumns}
+        filename="invoices"
       />
     </>
   )

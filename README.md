@@ -63,20 +63,22 @@ guards, surface them as errors, never silently drop history.*
 |---|---|---|
 | **Today** | `/` | Five queues (needs reply / send today / money / blockers / this week) + payout pulse. Paste-reply, Copy+Send, Mark paid with **cascade preview** — all in place |
 | **Dashboard** | `/dashboard` | Six pillars (Money · Pipeline · Delivery · People · Risk radar · Growth), every metric computed from existing rows, plus **weekly review mode** (copy → paste into your notes) |
-| **Sales** | `/sales/leads` | Board · cards · list · table · timeline · calendar — moving a card is a status flip with an event behind it |
-| | `/sales/leads/:id` | 360°: timeline, proposals, queued messages, paste reply (reply-cancels-pending). Won → **Turn into client** |
-| | `/sales/proposals` | Board · table · cards · calendar (quote expiry) |
+| **Sales** | `/sales/leads` | Board (drag = status flip, event written) · cards · list · table · timeline · calendar — **drag-and-drop with cascade preview** |
+| | `/sales/leads/:id` | 360°: timeline (comms + status events), proposals, queued messages, paste reply (reply-cancels-pending). Won → **Turn into client** |
+| | `/sales/proposals` | Board (drag = status flip, event written) · table · cards · calendar (quote expiry) |
 | | `/sales/proposals/new` | **5-step conditional proposal builder** — variant pills filter attributes, catalogue exclusions disable impossible combos with the reason shown, discount > 0 demands a written reason, owner-only margin, snapshot & send |
 | | `/sales/campaigns` | Email sequences per batch — visible chains, enrolment/reply stats, pause/resume (guard: no auto-send) |
 | | `/sales/catalogue` | Variant/attribute engine overview (doc 17) |
 | **Clients** | `/clients` | Table · cards — where won leads land (intake questionnaire queues automatically) |
-| | `/clients/:id` | **Client 360°**: projects, invoices (+ remind / mark-paid cascade), proposals, message timeline, deploy targets, machines, POs, blocked-payout health |
+| | `/clients/:id` | **Client 360°**: projects, invoices (+ remind / mark-paid cascade), proposals, message timeline (comms + status events), deploy targets, machines, POs, blocked-payout health |
 | **Delivery** | `/projects` | Projects (from store), purchase orders (investor-advance badge), deploy targets, credentials (masked) |
+| | `/projects/:id` | **Project 360°** — tabs: Overview (health, waterfall), Build (module orders, POs, deploys), Money (invoices, payouts, margin), Comms (timeline), Assets (devices) |
 | | `/vendors` | Table · cards — per-vendor POs, terms, totals; row → detail modal |
 | | `/assets` | Gallery · list — client devices with serial, warranty chip, color-first photo fallback |
-| **Money** | `/money/invoices` | Table · list · cards · calendar — aging-sorted, reminder + mark-paid with cascade preview (which payouts unlock) |
-| | `/money/payouts` | Board · table — accrued / blocked / payable / paid; guards decide, gestures don't; release is deliberate |
+| **Money** | `/money/invoices` | Table (bulk select + CSV) · list · cards · calendar — aging-sorted, reminder + mark-paid with cascade preview (which payouts unlock) |
+| | `/money/payouts` | Board · table (bulk select + CSV) — accrued / blocked / payable / paid; guards decide, gestures don't; release is deliberate |
 | **People** | `/people` | Team (flat fee only) + investor positions + funding rounds |
+| | `/people/investors/:id` | **Investor 360°** — tabs: Overview (waterfall, position), Rounds, Payouts, Comms, Statements (I6/I7/I9/I10 generators) |
 | **Comms** | `/comms/outbox` | Today / this week / sent / cancelled groups; Copy+Send, Skip, chained follow-ups |
 | | `/comms/templates` | ~30 templates with visible follow-up chains, grouped by stakeholder |
 | **Calendar** | `/calendar` | The due-date family in one month grid — follow-ups, quote expiry, invoice due, queued sends, credential expiry, warranties. No new table (doc 25) |
@@ -86,13 +88,13 @@ guards, surface them as errors, never silently drop history.*
 
 | View | Used by |
 |---|---|
-| Board | Leads, Proposals, Payouts |
-| Table | Leads, Proposals, Invoices, Payouts, Clients, Vendors, Assets |
+| Board | Leads, Proposals, Payouts (drag = status flip, cascades on drop) |
+| Table | Leads, Proposals, Invoices, Payouts, Clients, Vendors, Assets (bulk-select + CSV on money tables) |
 | List | Leads, Invoices, Assets |
 | Cards | Leads, Proposals, Invoices, Clients, Vendors |
-| Timeline | Leads (all conversations) |
+| Timeline | Leads, Clients, Projects (comms + status events merged) |
 | Gallery | Assets (client devices) |
-| 360° | Lead detail, Client detail |
+| 360° | Lead detail, Client detail, Project detail, Investor detail |
 | Calendar | Global, plus per-page overlays on Leads, Proposals, Invoices |
 
 The chosen view persists per entity (localStorage) — the app opens the way you
@@ -106,6 +108,10 @@ left it.
 - **Price snapshots**: proposals freeze lines at send.
 - **Flat fee only**: no hourly/monthly comp anywhere.
 - **Owner-only numbers**: margins shown to you (it's your app).
+- **Drag = status flip (with cascade)**: lead/proposal boards write events on drop; payouts stay guard-driven.
+- **Timeline = event union**: every detail screen merges `status_events` ∪ `comms_log` ∪ payments so history never drifts.
+- **Bulk actions on money**: invoices and payouts tables support multi-select and CSV export.
+- **Waterfall on investor deals**: capital stack visual clears tiers in order — principal → hurdle → carry.
 
 ## Roadmap
 

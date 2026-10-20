@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { PageHeader, SectionCard, Stat } from '../components/Layout'
 import { Chip } from '../components/StatusChip'
 import { FormModal, type FieldDef } from '../components/FormModal'
@@ -55,6 +56,7 @@ const ROUND_FIELDS: FieldDef[] = [
 
 export function People() {
   const s = useAppState()
+  const navigate = useNavigate()
 
   const [memberOpen, setMemberOpen] = useState(false)
   const [editMember, setEditMember] = useState<TeamMember | null>(null)
@@ -183,7 +185,7 @@ export function People() {
                   const blocked = s.payouts.filter((p) => p.payee === inv.name && p.status === 'blocked')
                   const payable = s.payouts.filter((p) => p.payee === inv.name && p.status === 'payable')
                   return (
-                    <tr key={inv.id} className="hover:bg-gray-50/70">
+                    <tr key={inv.id} className="hover:bg-gray-50/70 cursor-pointer" onClick={() => navigate(`/people/investors/${inv.id}`)}>
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">{inv.name}</div>
                         <div className="text-xs text-gray-400">{inv.email}</div>

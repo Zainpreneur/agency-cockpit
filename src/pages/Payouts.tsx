@@ -6,6 +6,7 @@ import { FormModal, type FieldDef } from '../components/FormModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { RowActions } from '../components/RowActions'
 import { ViewSwitcher, useViewMode, type ViewMode } from '../components/ViewSwitcher'
+import { BulkActionsBar, SelectAllCheckbox, RowCheckbox } from '../components/BulkActions'
 import { useAppState, releasePayout, createPayout, cancelPayout } from '../lib/store'
 import { money, dateShort } from '../lib/format'
 import type { Payout } from '../lib/types'
@@ -52,6 +53,7 @@ export function Payouts() {
   const [mode, setMode] = useViewMode('payouts', MODES, 'board')
   const [formOpen, setFormOpen] = useState(false)
   const [cancelTarget, setCancelTarget] = useState<Payout | null>(null)
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
 
   const payoutFields: FieldDef[] = PAYOUT_FIELDS.map((f) =>
     f.key === 'payee'
@@ -70,6 +72,24 @@ export function Payouts() {
   const visible = s.payouts.filter((p) => scope === 'all' || p.payeeRole === scope)
   const blockedTotal = visible.filter((p) => p.status === 'blocked').reduce((a, p) => a + p.amount, 0)
   const payableTotal = visible.filter((p) => p.status === 'payable').reduce((a, p) => a + p.amount, 0)
+
+  // Selection helpers (table mode only)
+  const allSelected = visible.length > 0 && selectedIds.length === visible.length
+  const someSelected = selectedIds.length > 0 && selectedIds.length < visible.length
+  const toggleAll = (checked: boolean) => setSelectedIds(checked ? visible.map((v) => v.id) : [])
+  const toggleRow = (id: number, checked: boolean) =>
+    setSelectedIds((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)))
+
+  const payoutColumns = (p: Payout) => ({
+    Payout: p.id,
+    Payee: p.payee,
+    Role: p.payeeRole,
+    Kind: p.kind,
+    Amount: p.amount,
+    Status: p.status,
+    Invoice: p.triggerInvoiceId ? s.invoices.find((i) => i.id === p.triggerInvoiceId)?.no ?? '' : '',
+    Note: p.note ?? '',
+  })
 
   const releaseBtn = (p: Payout) =>
     p.status === 'payable' ? (
@@ -193,6 +213,9 @@ export function Payouts() {
           <table className="w-full text-sm min-w-[680px]">
             <thead>
               <tr className="text-left text-xs text-gray-500 border-b border-gray-100">
+                <th className="px-4 py-2.5 font-medium w-10">
+                  <SelectAllCheckbox checked={allSelected} indeterminate={someSelected} onChange={toggleAll} />
+                </th>
                 <th className="px-4 py-2.5 font-medium">Payee</th>
                 <th className="px-4 py-2.5 font-medium">Kind</th>
                 <th className="px-4 py-2.5 font-medium text-right">Amount</th>
@@ -204,8 +227,12 @@ export function Payouts() {
             <tbody className="divide-y divide-gray-50">
               {visible.map((p) => {
                 const invoice = s.invoices.find((i) => i.id === p.triggerInvoiceId)
+                const isSelected = selectedIds.includes(p.id)
                 return (
-                  <tr key={p.id} className="hover:bg-gray-50/70">
+                  <tr key={p.id} className={`hover:bg-gray-50/70 ${isSelected ? 'bg-blue-50' : ''}`}>
+                    <td className="px-4 py-3">
+                      <RowCheckbox checked={isSelected} onChange={(c) => toggleRow(p.id, c)} />
+                    </td>
                     <td className="px-4 py-3">
                       <div className="font-medium text-gray-900">{p.payee}</div>
                       {p.note && <div className="text-xs text-gray-400">{p.note}</div>}
@@ -290,6 +317,14 @@ export function Payouts() {
         confirmLabel="Cancel payout"
         message="Cancelling keeps the row with a cancelled status so the trail stays. Paid rows can't un-happen — money history is append-only."
         onConfirm={() => (cancelTarget ? cancelPayout(cancelTarget.id) : { ok: false, error: 'Nothing selected.' })}
+      />
+
+      <BulkActionsBar
+        selectedIds={selectedIds}
+        allItems={visible}
+        onClearSelection={() => setSelectedIds([])}
+        getColumns={payoutColumns}
+        filename="payouts"
       />
     </>
   )

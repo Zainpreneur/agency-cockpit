@@ -3,7 +3,8 @@ import { PageHeader } from '../components/Layout'
 import { StatusChip, Chip } from '../components/StatusChip'
 import { ViewSwitcher, useViewMode, type ViewMode } from '../components/ViewSwitcher'
 import { CalendarBoard } from '../components/CalendarBoard'
-import { useAppState } from '../lib/store'
+import { ProposalsDraggableBoard } from '../components/DraggableBoard'
+import { useAppState, moveProposalStatus } from '../lib/store'
 import { money, dateShort, daysBetween } from '../lib/format'
 import type { Proposal, ProposalStatus } from '../lib/types'
 
@@ -85,25 +86,12 @@ export function ProposalsBoard() {
         }
       />
 
-      {/* ── BOARD ── */}
+      {/* ── BOARD (drag = status flip, event written on drop; accepted drops require pasted reply first) ── */}
       {mode === 'board' && (
-        <div className="flex gap-3 overflow-x-auto pb-3 -mx-4 px-4 md:mx-0 md:px-0">
-          {COLUMNS.map((col) => {
-            const items = s.proposals.filter((p) => col.statuses.includes(p.status))
-            return (
-              <div key={col.key} className="w-72 shrink-0">
-                <div className="flex items-center justify-between px-1 mb-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">{col.label}</span>
-                  <span className="text-xs text-gray-400 tabular-nums">{items.length}</span>
-                </div>
-                <div className="space-y-2">
-                  {items.map((p) => <ProposalCard key={p.id} p={p} />)}
-                  {items.length === 0 && <div className="rounded-xl border border-dashed border-gray-200 h-14" />}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        <ProposalsDraggableBoard
+          proposals={s.proposals}
+          onMove={moveProposalStatus}
+        />
       )}
 
       {/* ── TABLE ── */}

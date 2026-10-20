@@ -47,7 +47,33 @@ export function ClientDetail() {
   const openInvoices = invoices.filter((i) => i.status !== 'paid' && i.status !== 'void')
   const overdue = openInvoices.filter((i) => i.status === 'overdue')
   const proposals = s.proposals.filter((p) => p.leadName === name)
-  const timeline = s.commsLog.filter((c) => c.contactableName === name).sort((a, b) => b.at.localeCompare(a.at))
+  
+  // Timeline = comms_log ∪ status_events (client entity) — doc 25 event union
+  const clientEvents = s.statusEvents
+    .filter((e) => e.entity === 'client' && e.entityId === client.id)
+    .map((e) => ({
+      id: `event-${e.id}`,
+      time: e.at,
+      type: 'event' as const,
+      from: e.from,
+      to: e.to,
+      note: e.note,
+    }))
+  
+  const commsTimeline = s.commsLog
+    .filter((c) => c.contactableName === name)
+    .map((c) => ({
+      id: `comms-${c.id}`,
+      time: c.at,
+      type: 'comms' as const,
+      direction: c.direction,
+      snippet: c.snippet,
+      meta: c.templateCode,
+    }))
+  
+  const timeline = [...clientEvents, ...commsTimeline]
+    .sort((a, b) => b.time.localeCompare(a.time))
+  
   const deploys = s.deployTargets.filter((d) => d.clientName === name)
   const devices = s.devices.filter((d) => d.clientName === name)
   const pos = s.purchaseOrders.filter((po) => projects.some((p) => p.name === po.project))
@@ -142,16 +168,36 @@ export function ClientDetail() {
             ))}
           </SectionCard>
 
-          <SectionCard title="Timeline" hint="email-only v1 — paste replies to log what they said">
-            {timeline.length === 0 && <EmptyRow text="No messages yet." />}
-            {timeline.slice(0, 8).map((c) => (
-              <div key={c.id} className="flex gap-3 px-4 py-2.5">
-                <span className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-xs font-bold ${
-                  c.direction === 'in' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
-                }`}>{c.direction === 'in' ? '←' : '→'}</span>
+          <SectionCard title="Timeline" hint="email-only v1 — paste replies to log what they said; ◆ = status change">
+            {timeline.length === 0 && <EmptyRow text="No activity yet." />}
+            {timeline.slice(0, 12).map((item) => (
+              <div key={item.id} className="flex gap-3 px-4 py-2.5">
+                <span
+                  className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-xs font-bold ${
+                    item.type === 'comms'
+                      ? (item as any).direction === 'in'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-gray-100 text-gray-500'
+                      : 'bg-emerald-100 text-emerald-700'
+                  }`}
+                >
+                  {item.type === 'comms'
+                    ? (item as any).direction === 'in'
+                      ? '←'
+                      : '→'
+                    : '◆'}
+                </span>
                 <div className="min-w-0">
-                  <div className="text-sm text-gray-800">{c.snippet}</div>
-                  <div className="text-xs text-gray-400">{dateShort(c.at)}{c.templateCode ? ` · ${c.templateCode}` : ''}</div>
+                  <div className="text-sm text-gray-800">
+                    {item.type === 'comms'
+                      ? (item as any).snippet
+                      : `Status: ${(item as any).from} → ${(item as any).to}`}
+                  </div>
+                  <div className="text-xs text-gray-400 flex items-center gap-2">
+                    {dateShort(item.time)}
+                    {(item as any).meta && <span className="font-mono text-[11px] text-gray-400">{(item as any).meta}</span>}
+                    {(item as any).note && <span className="text-gray-500">— {(item as any).note}</span>}
+                  </div>
                 </div>
               </div>
             ))}

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { PageHeader, SectionCard, Stat } from '../components/Layout'
 import { StatusChip, Chip } from '../components/StatusChip'
 import { FormModal, type FieldDef, type FormValues } from '../components/FormModal'
@@ -111,6 +111,7 @@ const ROLE_OPTIONS = [
 
 export function Projects() {
   const s = useAppState()
+  const navigate = useNavigate()
 
   const [projectOpen, setProjectOpen] = useState(false)
   const [editProject, setEditProject] = useState<Project | null>(null)
@@ -172,7 +173,7 @@ export function Projects() {
         >
           {s.projects.length === 0 && <div className="px-4 py-6 text-sm text-gray-400 text-center">No projects yet.</div>}
           {s.projects.map((p) => (
-            <div key={p.id} className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-0">
+            <div key={p.id} onClick={() => navigate(`/projects/${p.id}`)} className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-0 cursor-pointer hover:bg-gray-50/50">
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold text-gray-900">{p.name}</div>
                 <div className="text-xs text-gray-500">{p.clientName} · {p.phase}</div>

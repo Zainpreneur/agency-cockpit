@@ -5,6 +5,7 @@ import { Chip } from '../components/StatusChip'
 import { ViewSwitcher, useViewMode, type ViewMode } from '../components/ViewSwitcher'
 import { CalendarBoard } from '../components/CalendarBoard'
 import { FormModal, type FieldDef } from '../components/FormModal'
+import { LeadsDraggableBoard } from '../components/DraggableBoard'
 import { useAppState, moveLeadStatus, convertLeadToClient, createLead } from '../lib/store'
 import { dateShort } from '../lib/format'
 import type { Lead, LeadStatus } from '../lib/types'
@@ -134,27 +135,19 @@ export function LeadsBoard() {
         }
       />
 
-      {/* ── BOARD ── */}
+      {/* ── BOARD (drag = status flip, event written on drop) ── */}
       {mode === 'board' && (
-        <div className="flex gap-3 overflow-x-auto pb-3 -mx-4 px-4 md:mx-0 md:px-0">
-          {COLUMNS.map((col) => {
-            const leads = s.leads.filter((l) => col.statuses.includes(l.status))
-            return (
-              <div key={col.key} className="w-64 shrink-0">
-                <div className="flex items-center justify-between px-1 mb-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">{col.label}</span>
-                  <span className="text-xs text-gray-400 tabular-nums">{leads.length}</span>
-                </div>
-                <div className="space-y-2 min-h-8">
-                  {leads.map((lead) => (
-                    <LeadCard key={lead.id} lead={lead} onStatus={(st) => move(lead.id, st)} />
-                  ))}
-                  {leads.length === 0 && <div className="rounded-xl border border-dashed border-gray-200 h-16" />}
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        <LeadsDraggableBoard
+          leads={s.leads}
+          onMove={(leadId, newStatus) => {
+            if (newStatus === 'convert') {
+              const id = convertLeadToClient(leadId)
+              if (id) navigate(`/clients/${id}`)
+            } else {
+              moveLeadStatus(leadId, newStatus as LeadStatus)
+            }
+          }}
+        />
       )}
 
       {/* ── CARDS ── */}

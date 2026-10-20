@@ -36,9 +36,32 @@ export function LeadDetail() {
 
   const existingClient = s.clients.find((c) => c.name === lead.businessName)
 
-  const timeline = s.commsLog
+  // Timeline = comms_log ∪ status_events (lead entity) — doc 25 event union
+  const leadEvents = s.statusEvents
+    .filter((e) => e.entity === 'lead' && e.entityId === lead.id)
+    .map((e) => ({
+      id: `event-${e.id}`,
+      time: e.at,
+      type: 'event' as const,
+      from: e.from,
+      to: e.to,
+      note: e.note,
+    }))
+  
+  const commsTimeline = s.commsLog
     .filter((c) => c.contactableName === lead.businessName)
-    .sort((a, b) => b.at.localeCompare(a.at))
+    .map((c) => ({
+      id: `comms-${c.id}`,
+      time: c.at,
+      type: 'comms' as const,
+      direction: c.direction,
+      snippet: c.snippet,
+      meta: c.templateCode,
+    }))
+  
+  const timeline = [...leadEvents, ...commsTimeline]
+    .sort((a, b) => b.time.localeCompare(a.time))
+  
   const proposals = s.proposals.filter((p) => p.leadId === lead.id)
   const queued = s.outbox.filter(
     (o) => o.contactableName === lead.businessName && (o.status === 'ready' || o.status === 'scheduled'),
@@ -92,19 +115,35 @@ export function LeadDetail() {
 
       <div className="grid md:grid-cols-3 gap-4">
         <div className="md:col-span-2 space-y-4">
-          <SectionCard title="Timeline" hint="email-only v1 — in and out, newest first">
-            {timeline.length === 0 && <EmptyRow text="No messages yet." />}
-            {timeline.map((c) => (
-              <div key={c.id} className="flex gap-3 px-4 py-3">
-                <span className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-xs font-bold ${
-                  c.direction === 'in' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
-                }`}>
-                  {c.direction === 'in' ? '←' : '→'}
+          <SectionCard title="Timeline" hint="email-only v1 — in and out, newest first; ◆ = status change">
+            {timeline.length === 0 && <EmptyRow text="No activity yet." />}
+            {timeline.map((item) => (
+              <div key={item.id} className="flex gap-3 px-4 py-3">
+                <span
+                  className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-xs font-bold ${
+                    item.type === 'comms'
+                      ? (item as any).direction === 'in'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-gray-100 text-gray-500'
+                      : 'bg-emerald-100 text-emerald-700'
+                  }`}
+                >
+                  {item.type === 'comms'
+                    ? (item as any).direction === 'in'
+                      ? '←'
+                      : '→'
+                    : '◆'}
                 </span>
                 <div className="min-w-0">
-                  <div className="text-sm text-gray-800">{c.snippet}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">
-                    {dateShort(c.at)} {c.templateCode && `· ${c.templateCode}`}
+                  <div className="text-sm text-gray-800">
+                    {item.type === 'comms'
+                      ? (item as any).snippet
+                      : `Status: ${(item as any).from} → ${(item as any).to}`}
+                  </div>
+                  <div className="text-xs text-gray-400 flex items-center gap-2 mt-0.5">
+                    {dateShort(item.time)}
+                    {(item as any).meta && <span className="font-mono text-[11px] text-gray-400">{(item as any).meta}</span>}
+                    {(item as any).note && <span className="text-gray-500">— {(item as any).note}</span>}
                   </div>
                 </div>
               </div>
