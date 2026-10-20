@@ -5,22 +5,53 @@ import { Chip } from '../components/StatusChip'
 import { ViewSwitcher, useViewMode, type ViewMode } from '../components/ViewSwitcher'
 import { CalendarBoard } from '../components/CalendarBoard'
 import { FormModal, type FieldDef } from '../components/FormModal'
-import { LeadsDraggableBoard } from '../components/DraggableBoard'
+import { PipelineBoard, DataTable, exportToCSV } from '../components/PipelineBoard'
 import { useAppState, moveLeadStatus, convertLeadToClient, createLead } from '../lib/store'
-import { dateShort } from '../lib/format'
+import { money, dateShort } from '../lib/format'
 import type { Lead, LeadStatus } from '../lib/types'
 import { metaFor } from '../lib/statuses'
 
-const COLUMNS: { key: string; label: string; statuses: LeadStatus[] }[] = [
-  { key: 'new', label: 'New', statuses: ['discovered'] },
-  { key: 'contacted', label: 'Contacted', statuses: ['contacted'] },
-  { key: 'demo', label: 'Demo', statuses: ['demo_built', 'demo_shared'] },
-  { key: 'proposal', label: 'Proposal', statuses: ['proposal_sent'] },
-  { key: 'negotiating', label: 'Negotiating', statuses: ['negotiating'] },
-  { key: 'closed', label: 'Closed', statuses: ['won', 'lost'] },
+const PIPELINE_COLUMNS = [
+  { key: 'new', label: 'New', statuses: ['discovered'] as LeadStatus[] },
+  { key: 'contacted', label: 'Contacted', statuses: ['contacted'] as LeadStatus[] },
+  { key: 'demo', label: 'Demo', statuses: ['demo_built', 'demo_shared'] as LeadStatus[] },
+  { key: 'proposal', label: 'Proposal', statuses: ['proposal_sent'] as LeadStatus[] },
+  { key: 'negotiating', label: 'Negotiating', statuses: ['negotiating'] as LeadStatus[] },
+  { key: 'closed', label: 'Closed', statuses: ['won', 'lost'] as LeadStatus[] },
 ]
 
-function LeadCard({ lead, onStatus }: { lead: Lead; onStatus: (s: LeadStatus) => void }) {
+const TABLE_COLUMNS = [
+  { key: 'businessName', label: 'Business', render: (l: Lead) => (
+    <div>
+      <div className="font-medium text-gray-900">{l.businessName}</div>
+      <div className="text-xs text-gray-400">{l.industry} · {l.city}</div>
+    </div>
+  ) },
+  { key: 'contactName', label: 'Contact', render: (l: Lead) => (
+    <div>
+      <div>{l.contactName}</div>
+      <div className="text-xs text-gray-400">{l.email}</div>
+    </div>
+  ) },
+  { key: 'source', label: 'Source', render: (l: Lead) => (
+    <span className="text-gray-600 capitalize">{l.source.replace('_', ' ')}</span>
+  ), sortable: true },
+  { key: 'status', label: 'Status', render: (l: Lead) => {
+    const meta = metaFor(l.status)
+    return <Chip tone={meta.tone}>{meta.label}</Chip>
+  }, groupable: true },
+  { key: 'nextFollowUpAt', label: 'Next follow-up', render: (l: Lead) => (
+    <span className="text-gray-600">{l.nextFollowUpAt ? dateShort(l.nextFollowUpAt) : '—'}</span>
+  ), sortable: true },
+  { key: 'lastMessage', label: 'Last message', render: (l: Lead) => {
+    const needs = l.lastInboundAt && new Date(l.lastInboundAt) > new Date(l.lastOutboundAt ?? 0)
+    return needs ? <Chip tone="amber">↩ waiting on you</Chip>
+      : l.lastOutboundAt ? <span className="text-xs text-gray-400">out {dateShort(l.lastOutboundAt)}</span>
+      : <span className="text-xs text-gray-400">—</span>
+  } },
+]
+
+function LeadCard({ lead, onStatus }: { lead: Lead; onStatus: (s: string) => void }) {
   const navigate = useNavigate()
   const meta = metaFor(lead.status)
   const lastTouch = lead.lastInboundAt && new Date(lead.lastInboundAt) > new Date(lead.lastOutboundAt ?? 0)
@@ -63,7 +94,7 @@ function LeadCard({ lead, onStatus }: { lead: Lead; onStatus: (s: LeadStatus) =>
       ) : (
         <div className="mt-2.5 pt-2 border-t border-gray-50 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition">
           <span className="text-[11px] text-gray-400 mr-auto">move →</span>
-          {COLUMNS.filter((c) => !c.statuses.includes(lead.status)).map((c) => (
+          {PIPELINE_COLUMNS.filter((c) => !c.statuses.includes(lead.status)).map((c) => (
             <button
               key={c.key}
               onClick={() => onStatus(c.statuses[0])}
@@ -106,10 +137,26 @@ export function LeadsBoard() {
   const navigate = useNavigate()
   const [mode, setMode] = useViewMode('leads', MODES, 'board')
   const [newOpen, setNewOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
 
-  const move = (id: number, status: LeadStatus) => moveLeadStatus(id, status)
+  const move = (id: number, status: string) => moveLeadStatus(id, status)
 
   const timeline = [...s.commsLog].sort((a, b) => b.at.localeCompare(a.at))
+
+  // Table selection helpers
+  const allSelected = s.leads.length > 0 && selectedIds.length === s.leads.length
+  const someSelected = selectedIds.length > 0 && selectedIds.length < s.leads.length
+  const toggleAll = (checked: boolean) => setSelectedIds(checked ? s.leads.map((l) => l.id) : [])
+  const toggleRow = (id: number, checked: boolean) =>
+    setSelectedIds((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)))
+
+  const leadColumns = (l: Lead) => ({
+    Business: l.businessName,
+    Contact: l.contactName,
+    Source: l.source.replace('_', ' '),
+    Status: metaFor(l.status).label,
+    'Next follow-up': l.nextFollowUpAt ? dateShort(l.nextFollowUpAt) : '—',
+  })
 
   return (
     <>
@@ -135,17 +182,31 @@ export function LeadsBoard() {
         }
       />
 
-      {/* ── BOARD (drag = status flip, event written on drop) ── */}
+      {/* ── BOARD (drag = status flip, event written on drop; cascade preview on hover) ── */}
       {mode === 'board' && (
-        <LeadsDraggableBoard
-          leads={s.leads}
+        <PipelineBoard
+          columns={PIPELINE_COLUMNS}
+          items={s.leads}
+          renderCard={(lead, onStatus) => <LeadCard lead={lead} onStatus={onStatus} />}
           onMove={(leadId, newStatus) => {
             if (newStatus === 'convert') {
               const id = convertLeadToClient(leadId)
               if (id) navigate(`/clients/${id}`)
             } else {
-              moveLeadStatus(leadId, newStatus as LeadStatus)
+              moveLeadStatus(leadId, newStatus)
             }
+          }}
+          getId={(l) => l.id}
+          getStatus={(l) => l.status}
+          onCascadePreview={(lead, newStatus) => {
+            const meta = metaFor(newStatus)
+            return (
+              <div className="px-3 py-2 text-sm text-gray-700">
+                Move <strong>{lead.businessName}</strong> to <span className="font-medium capitalize">{newStatus}</span>
+                <br />
+                <span className="text-xs text-gray-500">Writes status event · cancels pending outbound if archived</span>
+              </div>
+            )
           }}
         />
       )}
@@ -185,48 +246,23 @@ export function LeadsBoard() {
         </div>
       )}
 
-      {/* ── TABLE ── */}
+      {/* ── TABLE (sort, group, bulk-select, CSV) ── */}
       {mode === 'table' && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
-          <table className="w-full text-sm min-w-[760px]">
-            <thead>
-              <tr className="text-left text-xs text-gray-500 border-b border-gray-100">
-                <th className="px-4 py-2.5 font-medium">Business</th>
-                <th className="px-4 py-2.5 font-medium">Contact</th>
-                <th className="px-4 py-2.5 font-medium">Source</th>
-                <th className="px-4 py-2.5 font-medium">Status</th>
-                <th className="px-4 py-2.5 font-medium">Next follow-up</th>
-                <th className="px-4 py-2.5 font-medium">Last message</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {s.leads.map((lead) => {
-                const meta = metaFor(lead.status)
-                const needs = lead.lastInboundAt && new Date(lead.lastInboundAt) > new Date(lead.lastOutboundAt ?? 0)
-                return (
-                  <tr key={lead.id} onClick={() => navigate(`/sales/leads/${lead.id}`)} className="hover:bg-gray-50/70 cursor-pointer">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">{lead.businessName}</div>
-                      <div className="text-xs text-gray-400">{lead.industry} · {lead.city}</div>
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">
-                      <div>{lead.contactName}</div>
-                      <div className="text-xs text-gray-400">{lead.email}</div>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600 capitalize">{lead.source.replace('_', ' ')}</td>
-                    <td className="px-4 py-3"><Chip tone={meta.tone}>{meta.label}</Chip></td>
-                    <td className="px-4 py-3 text-gray-600">{lead.nextFollowUpAt ? dateShort(lead.nextFollowUpAt) : '—'}</td>
-                    <td className="px-4 py-3">
-                      {needs ? <Chip tone="amber">↩ waiting on you</Chip>
-                        : lead.lastOutboundAt ? <span className="text-xs text-gray-400">out {dateShort(lead.lastOutboundAt)}</span>
-                        : <span className="text-xs text-gray-400">—</span>}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={TABLE_COLUMNS}
+          items={s.leads}
+          getId={(l) => l.id}
+          defaultSort={{ key: 'businessName', direction: 'asc' }}
+          onRowClick={(l) => navigate(`/sales/leads/${l.id}`)}
+          selection={{
+            selectedIds,
+            onSelect: toggleRow,
+            onSelectAll: toggleAll,
+          }}
+          onExportCSV={(items) => exportToCSV(items, TABLE_COLUMNS, 'leads')}
+          exportFilename="leads"
+          rowClassName={(l) => l.status === 'archived' ? 'opacity-60' : ''}
+        />
       )}
 
       {/* ── TIMELINE (all conversations, newest first) ── */}

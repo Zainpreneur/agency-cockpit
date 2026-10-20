@@ -1,23 +1,50 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PageHeader } from '../components/Layout'
 import { StatusChip, Chip } from '../components/StatusChip'
 import { ViewSwitcher, useViewMode, type ViewMode } from '../components/ViewSwitcher'
 import { CalendarBoard } from '../components/CalendarBoard'
-import { ProposalsDraggableBoard } from '../components/DraggableBoard'
+import { PipelineBoard, DataTable, exportToCSV } from '../components/PipelineBoard'
 import { useAppState, moveProposalStatus } from '../lib/store'
 import { money, dateShort, daysBetween } from '../lib/format'
 import type { Proposal, ProposalStatus } from '../lib/types'
 
-const COLUMNS: { key: string; label: string; statuses: ProposalStatus[] }[] = [
-  { key: 'draft', label: 'Draft', statuses: ['draft'] },
-  { key: 'sent', label: 'Sent', statuses: ['sent', 'viewed'] },
-  { key: 'accepted', label: 'Accepted', statuses: ['accepted'] },
-  { key: 'closed', label: 'Closed lost', statuses: ['rejected', 'expired'] },
-]
-
 const MODES: ViewMode[] = ['board', 'table', 'cards', 'calendar']
 
-function ProposalCard({ p }: { p: Proposal }) {
+const PIPELINE_COLUMNS = [
+  { key: 'draft', label: 'Draft', statuses: ['draft'] as ProposalStatus[] },
+  { key: 'sent', label: 'Sent', statuses: ['sent', 'viewed'] as ProposalStatus[] },
+  { key: 'accepted', label: 'Accepted', statuses: ['accepted'] as ProposalStatus[] },
+  { key: 'closed', label: 'Closed lost', statuses: ['rejected', 'expired'] as ProposalStatus[] },
+]
+
+const TABLE_COLUMNS = [
+  { key: 'no', label: 'No', render: (p: Proposal) => (
+    <span className="font-medium text-gray-900">{p.no}</span>
+  ) },
+  { key: 'leadName', label: 'Client', render: (p: Proposal) => (
+    <div>
+      <div className="text-gray-800">{p.leadName}</div>
+      {p.discountReason && <div className="text-xs text-gray-400">discount: {p.discountReason}</div>}
+    </div>
+  ) },
+  { key: 'offeredPrice', label: 'Price', render: (p: Proposal) => (
+    <span className="text-right tabular-nums font-medium">{money(p.offeredPrice)}</span>
+  ), align: 'right' as const, sortable: true },
+  { key: 'margin', label: 'Nets', render: (p: Proposal) => {
+    const margin = p.offeredPrice - p.cost
+    return <span className="text-right tabular-nums text-gray-600">{money(margin)} · {Math.round((margin / p.offeredPrice) * 100)}%</span>
+  }, align: 'right' as const },
+  { key: 'validUntil', label: 'Valid until', render: (p: Proposal) => (
+    <span className="text-gray-600">{dateShort(p.validUntil)}</span>
+  ), sortable: true },
+  { key: 'status', label: 'Status', render: (p: Proposal) => (
+    <StatusChip status={p.status} />
+  ), groupable: true },
+]
+
+function ProposalCard({ proposal, onStatus }: { proposal: Proposal; onStatus: (s: string) => void }) {
+  const p = proposal
   const expiring = (p.status === 'sent' || p.status === 'viewed') && daysBetween(p.validUntil) > -7
   const past = daysBetween(p.validUntil) > 0
   const margin = p.offeredPrice - p.cost
@@ -70,6 +97,23 @@ export function ProposalsBoard() {
   const s = useAppState()
   const navigate = useNavigate()
   const [mode, setMode] = useViewMode('proposals', MODES, 'board')
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
+
+  // Table selection helpers
+  const allSelected = s.proposals.length > 0 && selectedIds.length === s.proposals.length
+  const someSelected = selectedIds.length > 0 && selectedIds.length < s.proposals.length
+  const toggleAll = (checked: boolean) => setSelectedIds(checked ? s.proposals.map((p) => p.id) : [])
+  const toggleRow = (id: number, checked: boolean) =>
+    setSelectedIds((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)))
+
+  const proposalColumns = (p: Proposal) => ({
+    No: p.no,
+    Client: p.leadName,
+    Price: money(p.offeredPrice),
+    Margin: money(p.offeredPrice - p.cost) + ` · ${Math.round(((p.offeredPrice - p.cost) / p.offeredPrice) * 100)}%`,
+    'Valid until': dateShort(p.validUntil),
+    Status: p.status,
+  })
 
   return (
     <>
@@ -88,51 +132,53 @@ export function ProposalsBoard() {
 
       {/* ── BOARD (drag = status flip, event written on drop; accepted drops require pasted reply first) ── */}
       {mode === 'board' && (
-        <ProposalsDraggableBoard
-          proposals={s.proposals}
+        <PipelineBoard
+          columns={PIPELINE_COLUMNS}
+          items={s.proposals}
+          renderCard={(proposal, onStatus) => <ProposalCard proposal={proposal} onStatus={onStatus} />}
           onMove={moveProposalStatus}
+          getId={(p) => p.id}
+          getStatus={(p) => p.status}
+          cardMinWidth={288}
+          emptyColumnHeight={72}
+          onCascadePreview={(proposal, newStatus) => (
+            <div className="px-3 py-2 text-sm text-gray-700">
+              Move <strong>{proposal.no}</strong> to <span className="font-medium capitalize">{newStatus}</span>
+              <br />
+              <span className="text-xs text-gray-500">
+                {newStatus === 'accepted'
+                  ? 'Requires pasted "accepted" reply first · writes event · flips lead to proposal_sent'
+                  : newStatus === 'sent'
+                    ? 'Writes event · queues proposal_send email · sets follow-up'
+                    : 'Writes status event'}
+              </span>
+            </div>
+          )}
         />
       )}
 
-      {/* ── TABLE ── */}
+      {/* ── TABLE (sort, group, bulk-select, CSV) ── */}
       {mode === 'table' && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
-          <table className="w-full text-sm min-w-[720px]">
-            <thead>
-              <tr className="text-left text-xs text-gray-500 border-b border-gray-100">
-                <th className="px-4 py-2.5 font-medium">No</th>
-                <th className="px-4 py-2.5 font-medium">Client</th>
-                <th className="px-4 py-2.5 font-medium text-right">Price</th>
-                <th className="px-4 py-2.5 font-medium text-right">Nets</th>
-                <th className="px-4 py-2.5 font-medium">Valid until</th>
-                <th className="px-4 py-2.5 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {s.proposals.map((p) => (
-                <tr key={p.id} onClick={() => navigate(`/sales/leads/${p.leadId}`)} className="hover:bg-gray-50/70 cursor-pointer">
-                  <td className="px-4 py-3 font-medium text-gray-900">{p.no}</td>
-                  <td className="px-4 py-3">
-                    <div className="text-gray-800">{p.leadName}</div>
-                    {p.discountReason && <div className="text-xs text-gray-400">discount: {p.discountReason}</div>}
-                  </td>
-                  <td className="px-4 py-3 text-right tabular-nums font-medium">{money(p.offeredPrice)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-gray-600">
-                    {money(p.offeredPrice - p.cost)} · {Math.round(((p.offeredPrice - p.cost) / p.offeredPrice) * 100)}%
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{dateShort(p.validUntil)}</td>
-                  <td className="px-4 py-3"><StatusChip status={p.status} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={TABLE_COLUMNS}
+          items={s.proposals}
+          getId={(p) => p.id}
+          defaultSort={{ key: 'no', direction: 'asc' }}
+          onRowClick={(p) => navigate(`/sales/leads/${p.leadId}`)}
+          selection={{
+            selectedIds,
+            onSelect: toggleRow,
+            onSelectAll: toggleAll,
+          }}
+          onExportCSV={(items) => exportToCSV(items, TABLE_COLUMNS, 'proposals')}
+          exportFilename="proposals"
+        />
       )}
 
       {/* ── CARDS ── */}
       {mode === 'cards' && (
         <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
-          {s.proposals.map((p) => <ProposalCard key={p.id} p={p} />)}
+          {s.proposals.map((p) => <ProposalCard key={p.id} proposal={p} onStatus={() => {}} />)}
         </div>
       )}
 

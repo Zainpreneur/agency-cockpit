@@ -6,10 +6,9 @@ import { metaFor } from '../lib/statuses'
 import { StatusEvent } from '../lib/types'
 
 /**
- * Generic PipelineBoard — kanban over any stage enum (doc 23 component inventory).
- * Drag = status flip with cascade preview on drop.
+ * Column definition for PipelineBoard (kanban) — needs statuses for grouping
  */
-export interface ColumnDef<T> {
+export interface PipelineColumnDef<T> {
   key: string
   label: string
   statuses: string[]
@@ -17,7 +16,7 @@ export interface ColumnDef<T> {
 }
 
 export interface PipelineBoardProps<T extends { id: number; status: string }> {
-  columns: ColumnDef<T>[]
+  columns: PipelineColumnDef<T>[]
   items: T[]
   renderCard: (item: T, onStatusChange: (newStatus: string) => void) => React.ReactElement
   onMove: (itemId: number, newStatus: string) => void
@@ -180,7 +179,7 @@ export function PipelineBoard<T extends { id: number; status: string }>({
 /**
  * Enhanced DataTable with sort, group, bulk-select, CSV export (doc 23 DataTable).
  */
-export interface ColumnDef<T> {
+export interface TableColumnDef<T> {
   key: string
   label: string
   render: (item: T) => React.ReactNode
@@ -190,7 +189,7 @@ export interface ColumnDef<T> {
 }
 
 export interface DataTableProps<T extends { id: number }> {
-  columns: ColumnDef<T>[]
+  columns: TableColumnDef<T>[]
   items: T[]
   getId: (item: T) => number
   defaultSort?: { key: string; direction: 'asc' | 'desc' }
@@ -414,7 +413,7 @@ export function DataTable<T extends { id: number }>({
 /**
  * CSV export helper
  */
-export function exportToCSV<T>(items: T[], columns: ColumnDef<T>[], filename: string) {
+export function exportToCSV<T>(items: T[], columns: TableColumnDef<T>[], filename: string) {
   const headers = columns.map((c) => c.label).join(',')
   const rows = items.map((item) =>
     columns.map((c) => {

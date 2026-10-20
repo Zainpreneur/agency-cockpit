@@ -8,7 +8,7 @@ import { ConfirmModal } from '../components/ConfirmModal'
 import { RowActions } from '../components/RowActions'
 import { ViewSwitcher, useViewMode, type ViewMode } from '../components/ViewSwitcher'
 import { CalendarBoard } from '../components/CalendarBoard'
-import { BulkActionsBar, SelectAllCheckbox, RowCheckbox } from '../components/BulkActions'
+import { DataTable, exportToCSV } from '../components/PipelineBoard'
 import {
   useAppState, cascadePreview, sendInvoice,
   createInvoice, updateInvoice, voidInvoice, deleteInvoice,
@@ -117,6 +117,55 @@ export function Invoices() {
     Proposal: inv.proposalNo ?? '',
   })
 
+  // DataTable columns for invoices (with custom actions column)
+  const TABLE_COLUMNS = [
+    { key: 'no', label: 'Invoice', render: (inv: Invoice) => (
+      <div>
+        <div className="font-medium text-gray-900">{inv.no}</div>
+        {inv.proposalNo && <div className="text-xs text-gray-400">from {inv.proposalNo}</div>}
+      </div>
+    ) },
+    { key: 'clientName', label: 'Client', render: (inv: Invoice) => (
+      <span className="text-gray-700">{inv.clientName}</span>
+    ) },
+    { key: 'total', label: 'Total', render: (inv: Invoice) => (
+      <span className="text-right tabular-nums font-semibold">{money(inv.total)}</span>
+    ), align: 'right' as const },
+    { key: 'aging', label: 'Aging', render: (inv: Invoice) => (
+      <Chip tone={dueTone(inv.dueAt, inv.paidAt) as 'green' | 'amber' | 'red' | 'gray'}>
+        {dueLabel(inv.dueAt, inv.paidAt)}
+      </Chip>
+    ) },
+    { key: 'status', label: 'Status', render: (inv: Invoice) => (
+      <StatusChip status={inv.status} domain="invoice" />
+    ), groupable: true },
+    { key: 'unlocks', label: 'Waits on / unlocks', render: (inv: Invoice) => {
+      const unlocks = cascadePreview(inv.id)
+      return unlocks.length > 0 ? (
+        <>unlocks {unlocks.map((u) => `${u.payee} ${money(u.amount)}`).join(' · ')}</>
+      ) : inv.status === 'paid' ? (
+        <span className="text-emerald-600">cascade complete{inv.paidVia ? ` · ${inv.paidVia}` : ''}</span>
+      ) : '—'
+    } },
+    { key: 'action', label: 'Action', render: (inv: Invoice) => (
+      <div className="flex justify-end items-center gap-1.5">
+        {actionsFor(inv, setPayInvoice, setRemind)}
+        <RowActions
+          onEdit={inv.status === 'draft' ? () => { setEditing(inv); setFormOpen(true) } : undefined}
+          extra={inv.status === 'paid' || inv.status === 'void' ? undefined : (
+            <button
+              onClick={() => (inv.status === 'draft' ? setRemoveTarget(inv) : setVoidTarget(inv))}
+              title={inv.status === 'draft' ? 'Delete draft' : 'Void invoice'}
+              className="rounded-lg w-7 h-7 text-xs ring-1 ring-gray-300 text-gray-500 hover:bg-red-50 hover:text-red-600"
+            >
+              ✕
+            </button>
+          )}
+        />
+      </div>
+    ), align: 'right' as const },
+  ]
+
   return (
     <>
       <PageHeader
@@ -141,78 +190,22 @@ export function Invoices() {
         <Stat label="Paid (open set)" value={money(paidThisMonth)} tone="green" />
       </div>
 
-      {/* ── TABLE ── */}
+      {/* ── TABLE (sort, group, bulk-select, CSV) ── */}
       {mode === 'table' && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
-          <table className="w-full text-sm min-w-[720px]">
-            <thead>
-              <tr className="text-left text-xs text-gray-500 border-b border-gray-100">
-                <th className="px-4 py-2.5 font-medium w-10">
-                  <SelectAllCheckbox checked={allSelected} indeterminate={someSelected} onChange={toggleAll} />
-                </th>
-                <th className="px-4 py-2.5 font-medium">Invoice</th>
-                <th className="px-4 py-2.5 font-medium">Client</th>
-                <th className="px-4 py-2.5 font-medium text-right">Total</th>
-                <th className="px-4 py-2.5 font-medium">Aging</th>
-                <th className="px-4 py-2.5 font-medium">Status</th>
-                <th className="px-4 py-2.5 font-medium">Waits on / unlocks</th>
-                <th className="px-4 py-2.5 font-medium text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {rows.map((inv) => {
-                const unlocks = cascadePreview(inv.id)
-                const agingDays = inv.status === 'paid' ? 0 : daysBetween(inv.dueAt)
-                const isSelected = selectedIds.includes(inv.id)
-                return (
-                  <tr key={inv.id} className={`hover:bg-gray-50/70 ${isSelected ? 'bg-blue-50' : ''}`}>
-                    <td className="px-4 py-3">
-                      <RowCheckbox checked={isSelected} onChange={(c) => toggleRow(inv.id, c)} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">{inv.no}</div>
-                      {inv.proposalNo && <div className="text-xs text-gray-400">from {inv.proposalNo}</div>}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">{inv.clientName}</td>
-                    <td className="px-4 py-3 text-right tabular-nums font-semibold">{money(inv.total)}</td>
-                    <td className="px-4 py-3">
-                      <Chip tone={dueTone(inv.dueAt, inv.paidAt) as 'green' | 'amber' | 'red' | 'gray'}>
-                        {dueLabel(inv.dueAt, inv.paidAt)}
-                      </Chip>
-                    </td>
-                    <td className="px-4 py-3"><StatusChip status={inv.status} domain="invoice" /></td>
-                    <td className="px-4 py-3 text-xs text-gray-500">
-                      {unlocks.length > 0 ? (
-                        <>unlocks {unlocks.map((u) => `${u.payee} ${money(u.amount)}`).join(' · ')}</>
-                      ) : inv.status === 'paid' ? (
-                        <span className="text-emerald-600">cascade complete{inv.paidVia ? ` · ${inv.paidVia}` : ''}</span>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end items-center gap-1.5">
-                        {actionsFor(inv, setPayInvoice, setRemind)}
-                        <RowActions
-                          onEdit={inv.status === 'draft' ? () => { setEditing(inv); setFormOpen(true) } : undefined}
-                          extra={inv.status === 'paid' || inv.status === 'void' ? undefined : (
-                            <button
-                              onClick={() => (inv.status === 'draft' ? setRemoveTarget(inv) : setVoidTarget(inv))}
-                              title={inv.status === 'draft' ? 'Delete draft' : 'Void invoice'}
-                              className="rounded-lg w-7 h-7 text-xs ring-1 ring-gray-300 text-gray-500 hover:bg-red-50 hover:text-red-600"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={TABLE_COLUMNS}
+          items={rows}
+          getId={(inv) => inv.id}
+          defaultSort={{ key: 'no', direction: 'asc' }}
+          selection={{
+            selectedIds,
+            onSelect: toggleRow,
+            onSelectAll: toggleAll,
+          }}
+          onExportCSV={(items) => exportToCSV(items, TABLE_COLUMNS, 'invoices')}
+          exportFilename="invoices"
+          rowClassName={(inv) => inv.status === 'paid' || inv.status === 'void' ? 'opacity-60' : ''}
+        />
       )}
 
       {/* ── LIST ── */}
@@ -347,14 +340,6 @@ export function Invoices() {
         confirmLabel="Delete draft"
         message="Drafts were never sent, so deleting is safe. Nothing in the books changes."
         onConfirm={() => (removeTarget ? deleteInvoice(removeTarget.id) : { ok: false, error: 'Nothing selected.' })}
-      />
-
-      <BulkActionsBar
-        selectedIds={selectedIds}
-        allItems={rows}
-        onClearSelection={() => setSelectedIds([])}
-        getColumns={invoiceColumns}
-        filename="invoices"
       />
     </>
   )
