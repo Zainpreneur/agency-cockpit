@@ -12,6 +12,7 @@
     "smoke:crud": "node scripts/smoke-crud.cjs"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.104.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.0.0"
