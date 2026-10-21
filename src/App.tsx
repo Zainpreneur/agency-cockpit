@@ -30,6 +30,14 @@ import { Reports } from './pages/Reports'
 import { BankReconciliation } from './pages/BankReconciliation'
 import { DefaultSalvage } from './pages/DefaultSalvage'
 import { MultiBranch } from './pages/MultiBranch'
+import { Demos } from './pages/Demos'
+import { Expenses } from './pages/Expenses'
+import { Payments } from './pages/Payments'
+import { FundingRounds } from './pages/FundingRounds'
+import { InvestorPayouts } from './pages/InvestorPayouts'
+import { AgencyAssets } from './pages/AgencyAssets'
+import { CommsLog } from './pages/CommsLog'
+import { Credentials } from './pages/Credentials'
 import { CommandPalette, useCommandPalette } from './components/CommandPalette'
 
 type NavItem = { to: string; label: string; exact?: boolean }
@@ -44,6 +52,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     { to: '/sales/proposals', label: 'Proposals' },
     { to: '/sales/campaigns', label: 'Campaigns' },
     { to: '/sales/catalogue', label: 'Catalogue' },
+    { to: '/demos', label: 'Demos' },
   ]},
   { title: '', items: [{ to: '/clients', label: '👥 Clients' }] },
   { title: 'Delivery', items: [
@@ -52,12 +61,17 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     { to: '/tickets', label: 'Tickets' },
     { to: '/vendors', label: 'Vendors' },
     { to: '/assets', label: 'Assets' },
+    { to: '/agency-assets', label: 'Agency Assets' },
     { to: '/client-repos', label: 'Client Repos' },
     { to: '/update-prs', label: 'Update PRs' },
   ]},
   { title: 'Money', items: [
     { to: '/money/invoices', label: 'Invoices' },
     { to: '/money/payouts', label: 'Payouts' },
+    { to: '/investor-payouts', label: 'Investor Payouts' },
+    { to: '/payments', label: 'Payments' },
+    { to: '/expenses', label: 'Expenses' },
+    { to: '/funding-rounds', label: 'Funding Rounds' },
     { to: '/reports', label: 'Reports' },
     { to: '/bank-reconciliation', label: 'Bank Recon' },
   ]},
@@ -69,6 +83,10 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
   { title: 'Comms', items: [
     { to: '/comms/outbox', label: 'Outbox' },
     { to: '/comms/templates', label: 'Templates' },
+    { to: '/comms-log', label: 'Comms Log' },
+  ]},
+  { title: 'Infra', items: [
+    { to: '/credentials', label: 'Credentials' },
   ]},
   { title: '', items: [
     { to: '/calendar', label: '▦ Calendar' },
@@ -163,6 +181,14 @@ export function App() {
             <Route path="/bank-reconciliation" element={<BankReconciliation />} />
             <Route path="/default-salvage" element={<DefaultSalvage />} />
             <Route path="/multi-branch" element={<MultiBranch />} />
+            <Route path="/demos" element={<Demos />} />
+            <Route path="/expenses" element={<Expenses />} />
+            <Route path="/payments" element={<Payments />} />
+            <Route path="/funding-rounds" element={<FundingRounds />} />
+            <Route path="/investor-payouts" element={<InvestorPayouts />} />
+            <Route path="/agency-assets" element={<AgencyAssets />} />
+            <Route path="/comms-log" element={<CommsLog />} />
+            <Route path="/credentials" element={<Credentials />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>

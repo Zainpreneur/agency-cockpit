@@ -49,8 +49,8 @@ export function EmptyRow({ text }: { text: string }) {
   return <div className="px-4 py-6 text-sm text-gray-400 text-center">{text}</div>
 }
 
-export function Stat({ label, value, tone }: { label: string; value: string; tone?: 'green' | 'red' | 'amber' }) {
-  const cls = tone === 'green' ? 'text-emerald-600' : tone === 'red' ? 'text-red-600' : tone === 'amber' ? 'text-amber-600' : 'text-gray-900'
+export function Stat({ label, value, tone }: { label: string; value: string; tone?: 'green' | 'red' | 'amber' | 'blue' | 'gray' }) {
+  const cls = tone === 'green' ? 'text-emerald-600' : tone === 'red' ? 'text-red-600' : tone === 'amber' ? 'text-amber-600' : tone === 'blue' ? 'text-blue-600' : 'text-gray-900'
   return (
     <div className="bg-white rounded-xl border border-gray-200 px-4 py-3">
       <div className="text-xs text-gray-500">{label}</div>
