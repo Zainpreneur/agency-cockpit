@@ -176,10 +176,11 @@ export type TeamMember = { id: number; name: string; email: string; pending: num
 export type Credential = {
   id: number
   provider: string
-  kind: 'oauth' | 'api_key' | 'ssh_key'
+  kind: 'oauth' | 'api_key' | 'ssh_key' | 'revoked'
   masked: string
   expiresAt?: string
   note?: string
+  status?: 'active' | 'revoked'
 }
 
 export type ClientDevice = {
@@ -248,6 +249,151 @@ export type Campaign = {
   replied: number
 }
 
+export type ExpenseCategory = 'tools' | 'utilities' | 'ads' | 'hosting' | 'travel' | 'other'
+
+export type Expense = {
+  id: number
+  date: string
+  category: ExpenseCategory
+  amount: number
+  currency: string
+  sarAmount: number
+  allocation: 'hours' | 'flat' | 'equal'
+  projectName?: string
+  clientName?: string
+  receiptUrl?: string
+  note?: string
+}
+
+export type ToolCost = {
+  id: number
+  vendorId?: number
+  vendorName?: string
+  name: string
+  plan?: string
+  seats?: number
+  amount: number
+  currency: string
+  sarAmount: number
+  fxRate?: number
+  interval: 'monthly' | 'yearly' | 'one_time'
+  nextRenewalAt: string
+  status: 'trial' | 'active' | 'paused' | 'cancelled'
+  allocatedBy: 'hours' | 'flat' | 'equal'
+}
+
+export type FundingRoundDetail = {
+  id: number
+  project: string
+  target: number
+  raised: number
+  rule: 'fixed' | 'multiple' | 'revenue_share'
+  fixedReturn?: number
+  multiple?: number
+  revenueSharePct?: number
+  sourceKind: 'salvage_round' | 'new_capital' | 'investor_advance'
+  salvageOfProjectId?: number
+  status: 'seeking' | 'committed' | 'funded' | 'returned' | 'closed'
+  termsSnapshot?: string
+  agreementUrl?: string
+  createdAt: string
+  fundedAt?: string
+  closedAt?: string
+  investorCommitments: InvestorCommitment[]
+}
+
+export type InvestorCommitment = {
+  id: number
+  fundingRoundId: number
+  investorId: number
+  investorName: string
+  amount: number
+  tier: 'senior' | 'junior'
+  status: 'pending' | 'committed' | 'funded'
+}
+
+export type InvestorPayoutDetail = {
+  id: number
+  investorId: number
+  investorName: string
+  fundingRoundId: number
+  roundProject: string
+  amount: number
+  tier: 'senior' | 'junior'
+  status: 'accrued' | 'blocked' | 'payable' | 'paid' | 'cancelled'
+  triggerInvoiceId?: number
+  paidAt?: string
+  triggerPaymentId?: number
+}
+
+export type DemoStatus = 'building' | 'live' | 'archived'
+
+export type Demo = {
+  id: number
+  templateId: number
+  templateName: string
+  forWhom: string
+  clientName?: string
+  status: DemoStatus
+  views: number
+  shortLink: string
+  githubPagesUrl?: string
+  expiresAt: string
+  createdAt: string
+}
+
+export type ClientDeviceRMA = {
+  id: number
+  deviceId: number
+  deviceKind: string
+  clientName: string
+  serial?: string
+  reason: string
+  status: 'requested' | 'approved' | 'shipped' | 'received' | 'replaced' | 'closed'
+  requestedAt: string
+  resolvedAt?: string
+  notes?: string
+}
+
+export type PurchaseOrderReceipt = {
+  id: number
+  poId: number
+  poNo: string
+  vendor: string
+  fileName: string
+  fileUrl: string
+  uploadedAt: string
+  uploadedBy: string
+}
+
+export type AssetStatus = 'available' | 'assigned' | 'maintenance' | 'retired'
+
+export type AgencyAsset = {
+  id: number
+  tag: string
+  name: string
+  kind: string
+  holder?: string
+  clientName?: string
+  status: AssetStatus
+  condition: 'new' | 'good' | 'fair' | 'poor'
+  imageHue: number
+  imageUrl?: string
+  purchasedAt: string
+  cost: number
+  assignedAt?: string
+  notes?: string
+}
+
+export type CredentialAuditEntry = {
+  id: number
+  credentialId: number
+  action: 'created' | 'rotated' | 'revoked' | 'accessed'
+  at: string
+  by: string
+  note?: string
+}
+
 export type ModuleOrderStatus =
   | 'requested' | 'spec_approved' | 'building' | 'code_review'
   | 'staging' | 'deployed' | 'invoiced' | 'cancelled'
@@ -303,10 +449,19 @@ export type AppState = {
   devices: ClientDevice[]
   repos: RepoRow[]
   fundingRounds: FundingRound[]
+  fundingRoundDetails: FundingRoundDetail[]
+  investorPayouts: InvestorPayoutDetail[]
   clients: Client[]
   vendors: Vendor[]
   projects: Project[]
   campaigns: Campaign[]
   moduleOrders: ModuleOrder[]
   tickets: Ticket[]
+  demos: Demo[]
+  expenses: Expense[]
+  toolCosts: ToolCost[]
+  clientDeviceRMAs: ClientDeviceRMA[]
+  poReceipts: PurchaseOrderReceipt[]
+  agencyAssets: AgencyAsset[]
+  credentialAuditLog: CredentialAuditEntry[]
 }

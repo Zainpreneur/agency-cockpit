@@ -362,4 +362,106 @@ export const mockData: AppState = {
     { id: 5, subject: 'WhatsApp template rejected by Meta', clientName: 'Aqua Pets', projectName: 'Aqua Pets booking site', priority: 'urgent', status: 'open', assignee: 'Omar', createdAt: d(-0.5), updatedAt: d(-0.5), notes: 'Need to resubmit with updated footer' },
     { id: 6, subject: 'Invoice INV-38 payment mismatch', clientName: 'Desert Carwash', projectName: 'Desert Carwash booking module', priority: 'high', status: 'resolved', assignee: 'Khalid', createdAt: d(-10), updatedAt: d(-8), notes: 'Partial payment — balance collected' },
   ],
+
+  demos: [
+    { id: 1, templateId: 1, templateName: 'SaaS Starter Kit', forWhom: 'Alnoor Hotel', clientName: 'Alnoor Hotel', status: 'live', views: 47, shortLink: 'https://demo.zainpreneur.com/alnoor-pos', githubPagesUrl: 'https://zainpreneur.github.io/alnoor-pos-demo', expiresAt: d(30), createdAt: d(-20) },
+    { id: 2, templateId: 2, templateName: 'Booking Engine', forWhom: 'Gulf Spa', clientName: 'Gulf Spa', status: 'live', views: 123, shortLink: 'https://demo.zainpreneur.com/gulf-spa', githubPagesUrl: 'https://zainpreneur.github.io/gulf-spa-demo', expiresAt: d(45), createdAt: d(-35) },
+    { id: 3, templateId: 3, templateName: 'Menu Builder', forWhom: 'Ocean Treats', clientName: 'Ocean Treats', status: 'live', views: 89, shortLink: 'https://demo.zainpreneur.com/ocean-treats', githubPagesUrl: 'https://zainpreneur.github.io/ocean-treats-demo', expiresAt: d(15), createdAt: d(-10) },
+    { id: 4, templateId: 4, templateName: 'Carwash Manager', forWhom: 'Desert Carwash', clientName: 'Desert Carwash', status: 'building', views: 0, shortLink: 'https://demo.zainpreneur.com/desert-carwash', expiresAt: d(60), createdAt: d(-2) },
+    { id: 5, templateId: 1, templateName: 'SaaS Starter Kit', forWhom: 'Prospect: Riyadh Cafe', status: 'archived', views: 12, shortLink: 'https://demo.zainpreneur.com/riyadh-cafe', expiresAt: d(-5), createdAt: d(-40) },
+  ],
+
+  expenses: [
+    { id: 1, date: d(-5), category: 'tools', amount: 29, currency: 'USD', sarAmount: 109, allocation: 'hours', projectName: 'Alnoor POS deployment', clientName: 'Alnoor Hotel', note: 'Cursor Pro subscription' },
+    { id: 2, date: d(-3), category: 'tools', amount: 20, currency: 'USD', sarAmount: 75, allocation: 'flat', note: 'Cursor Team seat' },
+    { id: 3, date: d(-10), category: 'hosting', amount: 45, currency: 'USD', sarAmount: 169, allocation: 'hours', projectName: 'Gulf Spa booking site', clientName: 'Gulf Spa', note: 'Vercel Pro' },
+    { id: 4, date: d(-15), category: 'ads', amount: 500, currency: 'SAR', sarAmount: 500, allocation: 'equal', note: 'Google Ads — Riyadh services campaign' },
+    { id: 5, date: d(-20), category: 'tools', amount: 100, currency: 'USD', sarAmount: 375, allocation: 'flat', note: 'Linear + GitHub Team' },
+    { id: 6, date: d(-25), category: 'utilities', amount: 300, currency: 'SAR', sarAmount: 300, allocation: 'equal', note: 'Office internet + electricity' },
+    { id: 7, date: d(-30), category: 'travel', amount: 1200, currency: 'SAR', sarAmount: 1200, allocation: 'flat', projectName: 'Alnoor POS deployment', clientName: 'Alnoor Hotel', note: 'Site visit — Jeddah' },
+  ],
+
+  toolCosts: [
+    { id: 1, vendorId: 2, vendorName: 'TechSouq', name: 'Cursor Pro', plan: 'Pro', seats: 1, amount: 20, currency: 'USD', sarAmount: 75, fxRate: 3.75, interval: 'monthly', nextRenewalAt: d(5), status: 'active', allocatedBy: 'hours' },
+    { id: 2, vendorId: 2, vendorName: 'TechSouq', name: 'Cursor Team', plan: 'Team', seats: 2, amount: 40, currency: 'USD', sarAmount: 150, fxRate: 3.75, interval: 'monthly', nextRenewalAt: d(10), status: 'active', allocatedBy: 'flat' },
+    { id: 3, vendorId: 3, vendorName: 'CloudHost Arabia', name: 'Vercel Pro', plan: 'Pro', seats: 1, amount: 20, currency: 'USD', sarAmount: 75, fxRate: 3.75, interval: 'monthly', nextRenewalAt: d(15), status: 'active', allocatedBy: 'hours' },
+    { id: 4, vendorId: 3, vendorName: 'CloudHost Arabia', name: 'Vercel Enterprise', plan: 'Enterprise', seats: 5, amount: 150, currency: 'USD', sarAmount: 563, fxRate: 3.75, interval: 'monthly', nextRenewalAt: d(20), status: 'trial', allocatedBy: 'hours' },
+    { id: 5, vendorId: 1, vendorName: 'Al-Rashid Trading', name: 'GitHub Team', plan: 'Team', seats: 3, amount: 12, currency: 'USD', sarAmount: 45, fxRate: 3.75, interval: 'monthly', nextRenewalAt: d(8), status: 'active', allocatedBy: 'flat' },
+    { id: 6, vendorId: 2, vendorName: 'TechSouq', name: 'Linear', plan: 'Business', seats: 2, amount: 15, currency: 'USD', sarAmount: 56, fxRate: 3.75, interval: 'monthly', nextRenewalAt: d(12), status: 'active', allocatedBy: 'flat' },
+    { id: 7, vendorId: 2, vendorName: 'TechSouq', name: 'Notion Plus', plan: 'Plus', seats: 1, amount: 8, currency: 'USD', sarAmount: 30, fxRate: 3.75, interval: 'monthly', nextRenewalAt: d(18), status: 'paused', allocatedBy: 'flat' },
+  ],
+
+  fundingRoundDetails: [
+    {
+      id: 1, project: 'Alnoor POS deployment', target: 20000, raised: 20000,
+      rule: 'fixed', fixedReturn: 28000, sourceKind: 'salvage_round', status: 'funded',
+      termsSnapshot: 'Fixed return SAR 28,000 (1.4×) within 18 months. Senior tranche.', agreementUrl: 'https://github.com/zainpreneur/agreements/blob/main/alnoor-funding.md',
+      createdAt: d(-60), fundedAt: d(-45), closedAt: d(-5),
+      investorCommitments: [
+        { id: 1, fundingRoundId: 1, investorId: 1, investorName: 'Ahmed', amount: 12000, tier: 'senior', status: 'funded' },
+        { id: 2, fundingRoundId: 1, investorId: 2, investorName: 'Sara', amount: 8000, tier: 'junior', status: 'funded' },
+      ]
+    },
+    {
+      id: 2, project: 'Ocean Treats menu site', target: 6000, raised: 3500,
+      rule: 'multiple', multiple: 1.5, sourceKind: 'new_capital', status: 'seeking',
+      termsSnapshot: '1.5× multiple within 24 months. Junior tranche.', agreementUrl: '',
+      createdAt: d(-30), fundedAt: undefined, closedAt: undefined,
+      investorCommitments: [
+        { id: 3, fundingRoundId: 2, investorId: 1, investorName: 'Ahmed', amount: 2000, tier: 'junior', status: 'committed' },
+        { id: 4, fundingRoundId: 2, investorId: 2, investorName: 'Sara', amount: 1500, tier: 'junior', status: 'pending' },
+      ]
+    },
+    {
+      id: 3, project: 'Aqua Pets booking site', target: 3000, raised: 3000,
+      rule: 'revenue_share', revenueSharePct: 15, sourceKind: 'new_capital', status: 'funded',
+      termsSnapshot: '15% revenue share until 2× returned. No time limit.', agreementUrl: 'https://github.com/zainpreneur/agreements/blob/main/aqua-funding.md',
+      createdAt: d(-90), fundedAt: d(-75), closedAt: d(-10),
+      investorCommitments: [
+        { id: 5, fundingRoundId: 3, investorId: 1, investorName: 'Ahmed', amount: 3000, tier: 'junior', status: 'funded' },
+      ]
+    },
+  ],
+
+  investorPayouts: [
+    { id: 1, investorId: 1, investorName: 'Ahmed', fundingRoundId: 1, roundProject: 'Alnoor POS deployment', amount: 12000, tier: 'senior', status: 'paid', triggerInvoiceId: 5, paidAt: d(-15), triggerPaymentId: 12 },
+    { id: 2, investorId: 2, investorName: 'Sara', fundingRoundId: 1, roundProject: 'Alnoor POS deployment', amount: 8000, tier: 'junior', status: 'payable', triggerInvoiceId: 5 },
+    { id: 3, investorId: 1, investorName: 'Ahmed', fundingRoundId: 3, roundProject: 'Aqua Pets booking site', amount: 1500, tier: 'junior', status: 'paid', triggerInvoiceId: 8, paidAt: d(-30), triggerPaymentId: 15 },
+    { id: 4, investorId: 1, investorName: 'Ahmed', fundingRoundId: 1, roundProject: 'Alnoor POS deployment', amount: 16000, tier: 'senior', status: 'blocked', triggerInvoiceId: 12 },
+    { id: 5, investorId: 2, investorName: 'Sara', fundingRoundId: 1, roundProject: 'Alnoor POS deployment', amount: 12000, tier: 'junior', status: 'accrued' },
+  ],
+
+  clientDeviceRMAs: [
+    { id: 1, deviceId: 3, deviceKind: 'Card terminal', clientName: 'Desert Carwash', serial: 'CTM-5510', reason: 'Card reader not reading chip', status: 'shipped', requestedAt: d(-5), resolvedAt: undefined, notes: 'Replacement shipped via Aramex — tracking 4321987654' },
+    { id: 2, deviceId: 2, deviceKind: 'Thermal printer', clientName: 'Alnoor Hotel', serial: 'PRN-2201', reason: 'Print head faded after 6 months', status: 'replaced', requestedAt: d(-15), resolvedAt: d(-8), notes: 'Replaced under warranty — new unit PRN-2201-B installed' },
+    { id: 3, deviceId: 5, deviceKind: 'Tablet stand', clientName: 'Ocean Treats', serial: 'TST-0074', reason: 'Hinge loose — wobbles', status: 'requested', requestedAt: d(-2), resolvedAt: undefined, notes: 'Awaiting vendor approval' },
+  ],
+
+  poReceipts: [
+    { id: 1, poId: 1, poNo: 'PO-1', vendor: 'Al-Rashid Trading', fileName: 'receipt_po1_20261015.pdf', fileUrl: 'https://storage.zainpreneur.com/receipts/po1_20261015.pdf', uploadedAt: d(-10), uploadedBy: 'Omar' },
+    { id: 2, poId: 2, poNo: 'PO-2', vendor: 'TechSouq', fileName: 'receipt_po2_20261010.jpg', fileUrl: 'https://storage.zainpreneur.com/receipts/po2_20261010.jpg', uploadedAt: d(-15), uploadedBy: 'Khalid' },
+    { id: 3, poId: 3, poNo: 'PO-3', vendor: 'CloudHost Arabia', fileName: 'receipt_po3_20261005.pdf', fileUrl: 'https://storage.zainpreneur.com/receipts/po3_20261005.pdf', uploadedAt: d(-20), uploadedBy: 'Omar' },
+    { id: 4, poId: 4, poNo: 'PO-4', vendor: 'Al-Rashid Trading', fileName: 'receipt_po4_20260928.jpg', fileUrl: 'https://storage.zainpreneur.com/receipts/po4_20260928.jpg', uploadedAt: d(-30), uploadedBy: 'Khalid' },
+    { id: 5, poId: 5, poNo: 'PO-5', vendor: 'TechSouq', fileName: 'receipt_po5_20260920.pdf', fileUrl: 'https://storage.zainpreneur.com/receipts/po5_20260920.pdf', uploadedAt: d(-35), uploadedBy: 'Omar' },
+  ],
+
+  agencyAssets: [
+    { id: 1, tag: 'AST-001', name: 'MacBook Pro 16"', kind: 'laptop', holder: 'Zain', status: 'assigned', condition: 'new', imageHue: 220, imageUrl: 'https://storage.zainpreneur.com/assets/mbp16.jpg', purchasedAt: d(-60), cost: 14500, assignedAt: d(-55), notes: 'Primary dev machine' },
+    { id: 2, tag: 'AST-002', name: 'iPhone 15 Pro', kind: 'phone', holder: 'Zain', status: 'assigned', condition: 'new', imageHue: 30, imageUrl: 'https://storage.zainpreneur.com/assets/iphone15.jpg', purchasedAt: d(-30), cost: 5500, assignedAt: d(-25), notes: 'Testing device' },
+    { id: 3, tag: 'AST-003', name: 'iPad Pro 12.9"', kind: 'tablet', holder: 'Omar', status: 'assigned', condition: 'good', imageHue: 200, purchasedAt: d(-120), cost: 6000, assignedAt: d(-100), notes: 'Client demo device' },
+    { id: 4, tag: 'AST-004', name: 'POS Terminal (spare)', kind: 'pos_terminal', status: 'available', condition: 'new', imageHue: 180, purchasedAt: d(-10), cost: 1800, notes: 'Spare for Alnoor deployment' },
+    { id: 5, tag: 'AST-005', name: 'Thermal Printer (spare)', kind: 'printer', status: 'available', condition: 'new', imageHue: 160, purchasedAt: d(-5), cost: 800, notes: 'Spare for Gulf Spa' },
+    { id: 6, tag: 'AST-006', name: 'MacBook Air M2', kind: 'laptop', status: 'maintenance', condition: 'fair', imageHue: 240, purchasedAt: d(-200), cost: 8000, notes: 'Battery replacement scheduled' },
+    { id: 7, tag: 'AST-007', name: 'External Monitor 27"', kind: 'monitor', holder: 'Khalid', status: 'assigned', condition: 'good', imageHue: 260, purchasedAt: d(-180), cost: 1500, assignedAt: d(-150), notes: 'Office monitor' },
+  ],
+
+  credentialAuditLog: [
+    { id: 1, credentialId: 1, action: 'created', at: d(-120), by: 'Zain', note: 'Initial Vercel token for Alnoor deployment' },
+    { id: 2, credentialId: 2, action: 'created', at: d(-100), by: 'Zain', note: 'Tap Payments API key for production' },
+    { id: 3, credentialId: 3, action: 'created', at: d(-90), by: 'Zain', note: 'Client-owned Google Business OAuth' },
+    { id: 4, credentialId: 4, action: 'created', at: d(-80), by: 'Zain', note: 'Office VPS SSH key' },
+    { id: 5, credentialId: 1, action: 'rotated', at: d(-30), by: 'Zain', note: 'Rotated Vercel token — old revoked' },
+    { id: 6, credentialId: 2, action: 'accessed', at: d(-5), by: 'Zain', note: 'Payment link generation' },
+    { id: 7, credentialId: 4, action: 'revoked', at: d(-2), by: 'Zain', note: 'Offboarding — VPS access revoked' },
+  ],
 }

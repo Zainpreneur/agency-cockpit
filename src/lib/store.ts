@@ -13,6 +13,9 @@ import { useSyncExternalStore } from 'react'
 import type {
   AppState, CommsEntry, Invoice, OutboxItem, Payout, Proposal, ProposalStatus, StatusEvent,
   ModuleOrder, ModuleOrderStatus, Ticket, TicketPriority, TicketStatus,
+  Demo, DemoStatus, Expense, ExpenseCategory, ToolCost, FundingRoundDetail, FundingRound,
+  InvestorCommitment, InvestorPayoutDetail, ClientDeviceRMA, PurchaseOrderReceipt,
+  AgencyAsset, AssetStatus, CredentialAuditEntry, Credential,
 } from './types'
 import { mockData } from './mockData'
 import { d, money } from './format'
@@ -1723,3 +1726,664 @@ export function convertTicketToModuleOrder(ticketId: number, v: Vals): ActionRes
   })
   return res
 }
+
+// ── Demos (doc 3, 25) ─────────────────────────────────────────────────────
+// Gallery view: thumb + facts, expiring filter, copy link / send L5
+
+export function createDemo(v: Vals): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const id = s.seq + 1
+    const now = new Date().toISOString()
+    const demo: Demo = {
+      id,
+      templateId: N(v, 'templateId'),
+      templateName: S(v, 'templateName') || 'Untitled',
+      forWhom: S(v, 'forWhom') || 'Unknown',
+      clientName: S(v, 'clientName') || undefined,
+      status: 'building',
+      views: 0,
+      shortLink: `https://demo.zainpreneur.com/${S(v, 'forWhom').toLowerCase().replace(/\s+/g, '-')}`,
+      expiresAt: ISO(v, 'expiresAt') || d(30),
+      createdAt: now,
+    }
+    let next: AppState = { ...s, seq: s.seq + 1, demos: [...s.demos, demo] }
+    next = ev(next, 'demo', id, 'new', 'building', demo.forWhom)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function updateDemo(id: number, v: Vals): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const demo = s.demos.find((x) => x.id === id)
+    if (!demo) return void (res = FAIL('Demo not found.'))
+    const from = demo.status
+    let next: AppState = {
+      ...s,
+      demos: s.demos.map((x) => (x.id === id ? {
+        ...x,
+        templateName: S(v, 'templateName') || x.templateName,
+        forWhom: S(v, 'forWhom') || x.forWhom,
+        clientName: S(v, 'clientName') ?? x.clientName,
+        status: (S(v, 'status') as DemoStatus) || x.status,
+        shortLink: S(v, 'shortLink') || x.shortLink,
+        githubPagesUrl: S(v, 'githubPagesUrl') ?? x.githubPagesUrl,
+        expiresAt: ISO(v, 'expiresAt') ?? x.expiresAt,
+      } : x)),
+    }
+    const to = (S(v, 'status') as DemoStatus) || demo.status
+    if (to !== from) next = ev(next, 'demo', id, from, to, demo.templateName)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function deleteDemo(id: number): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const demo = s.demos.find((x) => x.id === id)
+    if (!demo) return void (res = FAIL('Demo not found.'))
+    let next: AppState = { ...s, demos: s.demos.filter((x) => x.id !== id) }
+    next = ev(next, 'demo', id, demo.status, 'deleted', demo.templateName)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function archiveDemo(id: number): ActionResult {
+  return updateDemo(id, { status: 'archived' })
+}
+
+export function sendDemoLink(demoId: number): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const demo = s.demos.find((x) => x.id === demoId)
+    if (!demo) return void (res = FAIL('Demo not found.'))
+    const outboxItem: OutboxItem = {
+      id: s.seq + 1,
+      contactableName: demo.forWhom,
+      stakeholder: 'lead',
+      templateCode: 'demo_link',
+      subject: `Your demo is ready: ${demo.templateName}`,
+      body: `Hi,\n\nYour demo is ready: ${demo.shortLink}\n\nValid until ${new Date(demo.expiresAt).toLocaleDateString('en-GB')}.\n\nHappy to walk you through it.\nZain`,
+      dueAt: new Date().toISOString(),
+      status: 'ready',
+    }
+    let next: AppState = {
+      ...s,
+      seq: s.seq + 1,
+      outbox: [...s.outbox, outboxItem],
+      commsLog: log({ ...s, seq: s.seq + 2 }, {
+        contactableName: demo.forWhom, channel: 'email', direction: 'out',
+        snippet: `demo_link — ${demo.templateName}`, templateCode: 'demo_link',
+      }),
+    }
+    next = ev(next, 'demo', demoId, demo.status, demo.status, `link sent to ${demo.forWhom}`)
+    res = OK(outboxItem.id)
+    return next
+  })
+  return res
+}
+
+export function incrementDemoViews(demoId: number): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const demo = s.demos.find((x) => x.id === demoId)
+    if (!demo) return void (res = FAIL('Demo not found.'))
+    let next: AppState = {
+      ...s,
+      demos: s.demos.map((x) => (x.id === demoId ? { ...x, views: x.views + 1 } : x)),
+    }
+    res = OK(demoId)
+    return next
+  })
+  return res
+}
+
+// ── Expenses / Tool Costs (doc 10, 25) ───────────────────────────────────
+// True-margin math: expenses allocated by hours/flat/equal
+
+export function createExpense(v: Vals): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const id = s.seq + 1
+    const now = new Date().toISOString()
+    const exp: Expense = {
+      id,
+      date: ISO(v, 'date') || now.slice(0, 10),
+      category: (S(v, 'category') as ExpenseCategory) || 'other',
+      amount: N(v, 'amount'),
+      currency: S(v, 'currency') || 'SAR',
+      sarAmount: N(v, 'sarAmount') || N(v, 'amount'),
+      allocation: (S(v, 'allocation') as 'hours' | 'flat' | 'equal') || 'hours',
+      projectName: S(v, 'projectName') || undefined,
+      clientName: S(v, 'clientName') || undefined,
+      receiptUrl: S(v, 'receiptUrl') || undefined,
+      note: S(v, 'note') || undefined,
+    }
+    let next: AppState = { ...s, seq: s.seq + 1, expenses: [...s.expenses, exp] }
+    next = ev(next, 'expense', id, 'new', 'recorded', `${exp.category}: ${exp.sarAmount} SAR`)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function updateExpense(id: number, v: Vals): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const exp = s.expenses.find((x) => x.id === id)
+    if (!exp) return void (res = FAIL('Expense not found.'))
+    let next: AppState = {
+      ...s,
+      expenses: s.expenses.map((x) => (x.id === id ? {
+        ...x,
+        date: ISO(v, 'date') || x.date,
+        category: (S(v, 'category') as ExpenseCategory) || x.category,
+        amount: N(v, 'amount') || x.amount,
+        currency: S(v, 'currency') || x.currency,
+        sarAmount: N(v, 'sarAmount') || x.sarAmount,
+        allocation: (S(v, 'allocation') as 'hours' | 'flat' | 'equal') || x.allocation,
+        projectName: S(v, 'projectName') ?? x.projectName,
+        clientName: S(v, 'clientName') ?? x.clientName,
+        receiptUrl: S(v, 'receiptUrl') ?? x.receiptUrl,
+        note: S(v, 'note') ?? x.note,
+      } : x)),
+    }
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function deleteExpense(id: number): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const exp = s.expenses.find((x) => x.id === id)
+    if (!exp) return void (res = FAIL('Expense not found.'))
+    let next: AppState = { ...s, expenses: s.expenses.filter((x) => x.id !== id) }
+    next = ev(next, 'expense', id, 'recorded', 'deleted', `${exp.category}: ${exp.sarAmount} SAR`)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function createToolCost(v: Vals): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const id = s.seq + 1
+    const now = new Date().toISOString()
+    const tc: ToolCost = {
+      id,
+      vendorId: N(v, 'vendorId') || undefined,
+      vendorName: S(v, 'vendorName') || undefined,
+      name: S(v, 'name') || 'Untitled tool',
+      plan: S(v, 'plan') || undefined,
+      seats: N(v, 'seats') || undefined,
+      amount: N(v, 'amount'),
+      currency: S(v, 'currency') || 'SAR',
+      sarAmount: N(v, 'sarAmount') || N(v, 'amount'),
+      fxRate: N(v, 'fxRate') || undefined,
+      interval: (S(v, 'interval') as 'monthly' | 'yearly' | 'one_time') || 'monthly',
+      nextRenewalAt: ISO(v, 'nextRenewalAt') || d(30),
+      status: (S(v, 'status') as 'trial' | 'active' | 'paused' | 'cancelled') || 'active',
+      allocatedBy: (S(v, 'allocatedBy') as 'hours' | 'flat' | 'equal') || 'hours',
+    }
+    let next: AppState = { ...s, seq: s.seq + 1, toolCosts: [...s.toolCosts, tc] }
+    next = ev(next, 'tool_cost', id, 'new', 'active', tc.name)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function updateToolCost(id: number, v: Vals): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const tc = s.toolCosts.find((x) => x.id === id)
+    if (!tc) return void (res = FAIL('Tool cost not found.'))
+    const from = tc.status
+    let next: AppState = {
+      ...s,
+      toolCosts: s.toolCosts.map((x) => (x.id === id ? {
+        ...x,
+        vendorId: N(v, 'vendorId') ?? x.vendorId,
+        vendorName: S(v, 'vendorName') ?? x.vendorName,
+        name: S(v, 'name') || x.name,
+        plan: S(v, 'plan') ?? x.plan,
+        seats: N(v, 'seats') ?? x.seats,
+        amount: N(v, 'amount') || x.amount,
+        currency: S(v, 'currency') || x.currency,
+        sarAmount: N(v, 'sarAmount') || x.sarAmount,
+        fxRate: N(v, 'fxRate') ?? x.fxRate,
+        interval: (S(v, 'interval') as 'monthly' | 'yearly' | 'one_time') || x.interval,
+        nextRenewalAt: ISO(v, 'nextRenewalAt') ?? x.nextRenewalAt,
+        status: (S(v, 'status') as 'trial' | 'active' | 'paused' | 'cancelled') || x.status,
+        allocatedBy: (S(v, 'allocatedBy') as 'hours' | 'flat' | 'equal') || x.allocatedBy,
+      } : x)),
+    }
+    const to = (S(v, 'status') as 'trial' | 'active' | 'paused' | 'cancelled') || tc.status
+    if (to !== from) next = ev(next, 'tool_cost', id, from, to, tc.name)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function deleteToolCost(id: number): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const tc = s.toolCosts.find((x) => x.id === id)
+    if (!tc) return void (res = FAIL('Tool cost not found.'))
+    let next: AppState = { ...s, toolCosts: s.toolCosts.filter((x) => x.id !== id) }
+    next = ev(next, 'tool_cost', id, tc.status, 'deleted', tc.name)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+// ── Client Device RMA (doc 25) ────────────────────────────────────────────
+
+export function createDeviceRMA(v: Vals): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const id = s.seq + 1
+    const now = new Date().toISOString()
+    const rma: ClientDeviceRMA = {
+      id,
+      deviceId: N(v, 'deviceId'),
+      deviceKind: S(v, 'deviceKind') || 'Unknown',
+      clientName: S(v, 'clientName') || 'Unknown',
+      serial: S(v, 'serial') || undefined,
+      reason: S(v, 'reason') || 'Not specified',
+      status: 'requested',
+      requestedAt: now,
+      resolvedAt: undefined,
+      notes: S(v, 'notes') || undefined,
+    }
+    let next: AppState = { ...s, seq: s.seq + 1, clientDeviceRMAs: [...s.clientDeviceRMAs, rma] }
+    next = ev(next, 'device_rma', id, 'new', 'requested', `${rma.deviceKind} @ ${rma.clientName}`)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function updateDeviceRMA(id: number, v: Vals): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const rma = s.clientDeviceRMAs.find((x) => x.id === id)
+    if (!rma) return void (res = FAIL('RMA not found.'))
+    const from = rma.status
+    let next: AppState = {
+      ...s,
+      clientDeviceRMAs: s.clientDeviceRMAs.map((x) => (x.id === id ? {
+        ...x,
+        deviceKind: S(v, 'deviceKind') || x.deviceKind,
+        clientName: S(v, 'clientName') || x.clientName,
+        serial: S(v, 'serial') ?? x.serial,
+        reason: S(v, 'reason') || x.reason,
+        status: (S(v, 'status') as 'requested' | 'approved' | 'shipped' | 'received' | 'replaced' | 'closed') || x.status,
+        notes: S(v, 'notes') ?? x.notes,
+        resolvedAt: (S(v, 'status') === 'replaced' || S(v, 'status') === 'closed') ? new Date().toISOString() : x.resolvedAt,
+      } : x)),
+    }
+    const to = (S(v, 'status') as 'requested' | 'approved' | 'shipped' | 'received' | 'replaced' | 'closed') || rma.status
+    if (to !== from) next = ev(next, 'device_rma', id, from, to, `${rma.deviceKind} @ ${rma.clientName}`)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function deleteDeviceRMA(id: number): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const rma = s.clientDeviceRMAs.find((x) => x.id === id)
+    if (!rma) return void (res = FAIL('RMA not found.'))
+    let next: AppState = { ...s, clientDeviceRMAs: s.clientDeviceRMAs.filter((x) => x.id !== id) }
+    next = ev(next, 'device_rma', id, rma.status, 'deleted', `${rma.deviceKind} @ ${rma.clientName}`)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+// ── PO Receipts (doc 19, 25) ──────────────────────────────────────────────
+
+export function addPOReceipt(v: Vals): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const id = s.seq + 1
+    const now = new Date().toISOString()
+    const receipt: PurchaseOrderReceipt = {
+      id,
+      poId: N(v, 'poId'),
+      poNo: S(v, 'poNo') || 'Unknown',
+      vendor: S(v, 'vendor') || 'Unknown',
+      fileName: S(v, 'fileName') || 'receipt',
+      fileUrl: S(v, 'fileUrl') || '',
+      uploadedAt: now,
+      uploadedBy: S(v, 'uploadedBy') || 'Unknown',
+    }
+    let next: AppState = { ...s, seq: s.seq + 1, poReceipts: [...s.poReceipts, receipt] }
+    next = ev(next, 'po_receipt', id, 'new', 'uploaded', receipt.poNo)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function deletePOReceipt(id: number): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const receipt = s.poReceipts.find((x) => x.id === id)
+    if (!receipt) return void (res = FAIL('Receipt not found.'))
+    let next: AppState = { ...s, poReceipts: s.poReceipts.filter((x) => x.id !== id) }
+    next = ev(next, 'po_receipt', id, 'uploaded', 'deleted', receipt.poNo)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function chasePOVendor(poId: number): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const po = s.purchaseOrders.find((x) => x.id === poId)
+    if (!po) return void (res = FAIL('PO not found.'))
+    const outboxItem: OutboxItem = {
+      id: s.seq + 1,
+      contactableName: po.vendor,
+      stakeholder: 'vendor',
+      templateCode: 'po_chase',
+      subject: `Chase: ${po.no} — ${po.project}`,
+      body: `Hi ${po.vendor.split(' ')[0]},\n\nJust checking on ${po.no} for ${po.project}. Any update on the delivery timeline?\n\nThanks,\nZain`,
+      dueAt: new Date().toISOString(),
+      status: 'ready',
+    }
+    let next: AppState = {
+      ...s,
+      seq: s.seq + 1,
+      outbox: [...s.outbox, outboxItem],
+      commsLog: log({ ...s, seq: s.seq + 2 }, {
+        contactableName: po.vendor, channel: 'email', direction: 'out',
+        snippet: `po_chase — ${po.no}`, templateCode: 'po_chase',
+      }),
+    }
+    next = ev(next, 'purchase_order', poId, po.status, po.status, `chase sent to ${po.vendor}`)
+    res = OK(outboxItem.id)
+    return next
+  })
+  return res
+}
+
+// ── Agency Assets (doc 25) ────────────────────────────────────────────────
+
+export function createAgencyAsset(v: Vals): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const id = s.seq + 1
+    const now = new Date().toISOString()
+    const asset: AgencyAsset = {
+      id,
+      tag: S(v, 'tag') || `AST-${String(id).padStart(3, '0')}`,
+      name: S(v, 'name') || 'Untitled asset',
+      kind: S(v, 'kind') || 'asset',
+      holder: S(v, 'holder') || undefined,
+      clientName: S(v, 'clientName') || undefined,
+      status: (S(v, 'status') as AssetStatus) || 'available',
+      condition: (S(v, 'condition') as 'new' | 'good' | 'fair' | 'poor') || 'good',
+      imageHue: N(v, 'imageHue') || 200,
+      imageUrl: S(v, 'imageUrl') || undefined,
+      purchasedAt: ISO(v, 'purchasedAt') || new Date().toISOString().slice(0, 10),
+      cost: N(v, 'cost'),
+      assignedAt: S(v, 'assignedAt') || undefined,
+      notes: S(v, 'notes') || undefined,
+    }
+    let next: AppState = { ...s, seq: s.seq + 1, agencyAssets: [...s.agencyAssets, asset] }
+    next = ev(next, 'agency_asset', id, 'new', asset.status, asset.name)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function updateAgencyAsset(id: number, v: Vals): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const asset = s.agencyAssets.find((x) => x.id === id)
+    if (!asset) return void (res = FAIL('Asset not found.'))
+    const from = asset.status
+    let next: AppState = {
+      ...s,
+      agencyAssets: s.agencyAssets.map((x) => (x.id === id ? {
+        ...x,
+        tag: S(v, 'tag') || x.tag,
+        name: S(v, 'name') || x.name,
+        kind: S(v, 'kind') || x.kind,
+        holder: S(v, 'holder') ?? x.holder,
+        clientName: S(v, 'clientName') ?? x.clientName,
+        status: (S(v, 'status') as AssetStatus) || x.status,
+        condition: (S(v, 'condition') as 'new' | 'good' | 'fair' | 'poor') || x.condition,
+        imageHue: N(v, 'imageHue') || x.imageHue,
+        imageUrl: S(v, 'imageUrl') ?? x.imageUrl,
+        purchasedAt: ISO(v, 'purchasedAt') ?? x.purchasedAt,
+        cost: N(v, 'cost') || x.cost,
+        assignedAt: S(v, 'assignedAt') ?? x.assignedAt,
+        notes: S(v, 'notes') ?? x.notes,
+      } : x)),
+    }
+    const to = (S(v, 'status') as AssetStatus) || asset.status
+    if (to !== from) next = ev(next, 'agency_asset', id, from, to, asset.name)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function deleteAgencyAsset(id: number): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const asset = s.agencyAssets.find((x) => x.id === id)
+    if (!asset) return void (res = FAIL('Asset not found.'))
+    let next: AppState = { ...s, agencyAssets: s.agencyAssets.filter((x) => x.id !== id) }
+    next = ev(next, 'agency_asset', id, asset.status, 'deleted', asset.name)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function assignAgencyAsset(id: number, holder: string, clientName?: string): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const asset = s.agencyAssets.find((x) => x.id === id)
+    if (!asset) return void (res = FAIL('Asset not found.'))
+    if (asset.status !== 'available' && asset.status !== 'maintenance') {
+      return void (res = FAIL('Asset must be available or in maintenance to assign.'))
+    }
+    let next: AppState = {
+      ...s,
+      agencyAssets: s.agencyAssets.map((x) => (x.id === id ? {
+        ...x,
+        holder,
+        clientName: clientName ?? x.clientName,
+        status: 'assigned',
+        assignedAt: new Date().toISOString(),
+      } : x)),
+    }
+    next = ev(next, 'agency_asset', id, asset.status, 'assigned', `assigned to ${holder}`)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function unassignAgencyAsset(id: number): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const asset = s.agencyAssets.find((x) => x.id === id)
+    if (!asset) return void (res = FAIL('Asset not found.'))
+    let next: AppState = {
+      ...s,
+      agencyAssets: s.agencyAssets.map((x) => (x.id === id ? {
+        ...x,
+        holder: undefined,
+        clientName: undefined,
+        status: 'available',
+        assignedAt: undefined,
+      } : x)),
+    }
+    next = ev(next, 'agency_asset', id, asset.status, 'available', 'unassigned')
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+// ── Credentials Vault: Rotate/Revoke/Audit (doc 15, 25) ───────────────────
+
+export function rotateCredential(id: number, newMasked: string): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const cred = s.credentials.find((x) => x.id === id)
+    if (!cred) return void (res = FAIL('Credential not found.'))
+    let next: AppState = {
+      ...s,
+      credentials: s.credentials.map((x) => (x.id === id ? { ...x, masked: newMasked, expiresAt: d(90) } : x)),
+      credentialAuditLog: [...s.credentialAuditLog, {
+        id: s.seq + 1,
+        credentialId: id,
+        action: 'rotated',
+        at: new Date().toISOString(),
+        by: 'Zain',
+        note: `Rotated — old value revoked, new expiry 90 days`,
+      }],
+    }
+    next = ev(next, 'credential', id, 'active', 'rotated', cred.provider)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function revokeCredential(id: number): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const cred = s.credentials.find((x) => x.id === id)
+    if (!cred) return void (res = FAIL('Credential not found.'))
+    let next: AppState = {
+      ...s,
+      credentials: s.credentials.map((x) => (x.id === id ? { ...x, kind: 'revoked', status: 'revoked' } : x)),
+      credentialAuditLog: [...s.credentialAuditLog, {
+        id: s.seq + 1,
+        credentialId: id,
+        action: 'revoked',
+        at: new Date().toISOString(),
+        by: 'Zain',
+        note: 'Credential revoked — access terminated',
+      }],
+    }
+    next = ev(next, 'credential', id, 'active', 'revoked', cred.provider)
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+export function accessCredential(id: number): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const cred = s.credentials.find((x) => x.id === id)
+    if (!cred) return void (res = FAIL('Credential not found.'))
+    let next: AppState = {
+      ...s,
+      credentialAuditLog: [...s.credentialAuditLog, {
+        id: s.seq + 1,
+        credentialId: id,
+        action: 'accessed',
+        at: new Date().toISOString(),
+        by: 'Zain',
+        note: 'Credential accessed for operation',
+      }],
+    }
+    res = OK(id)
+    return next
+  })
+  return res
+}
+
+// ── Module Order: T2 Send (doc 14) ────────────────────────────────────────
+
+export function sendModuleOrderT2(moduleOrderId: number): ActionResult {
+  let res: ActionResult = FAIL('not run')
+  setState((s) => {
+    const mo = s.moduleOrders.find((x) => x.id === moduleOrderId)
+    if (!mo) return void (res = FAIL('Module order not found.'))
+    const project = s.projects.find((p) => p.name === mo.projectName)
+    const assignee = mo.assignee || (project ? s.team.find((t) => t.name === project.clientName)?.name : undefined) || 'Team'
+    const outboxItem: OutboxItem = {
+      id: s.seq + 1,
+      contactableName: assignee,
+      stakeholder: 'team',
+      templateCode: 'module_order_t2',
+      subject: `T2 Brief: ${mo.name} — ${mo.projectName}`,
+      body: `Hi ${assignee},\n\nNew module order assigned:\n\n${mo.name}\nClient: ${mo.clientName}\nProject: ${mo.projectName}\nPrice: SAR ${mo.price.toLocaleString()}\nFee: SAR ${mo.fee.toLocaleString()}\n\nSpec:\n${mo.spec || '—'}\n\nPR: ${mo.prUrl || 'Not created yet'}\n\nPlease review and start building.\n\nZain`,
+      dueAt: new Date().toISOString(),
+      status: 'ready',
+    }
+    let next: AppState = {
+      ...s,
+      seq: s.seq + 1,
+      outbox: [...s.outbox, outboxItem],
+      commsLog: log({ ...s, seq: s.seq + 2 }, {
+        contactableName: assignee, channel: 'email', direction: 'out',
+        snippet: `module_order_t2 — ${mo.name}`, templateCode: 'module_order_t2',
+      }),
+    }
+    next = ev(next, 'module_order', moduleOrderId, mo.status, mo.status, `T2 sent to ${assignee}`)
+    res = OK(outboxItem.id)
+    return next
+  })
+  return res
+}
+
+// ── Agency Assets: Assign/Unassign (doc 25) ──────────────────────────────
+
+// Already exported above: assignAgencyAsset, unassignAgencyAsset
+
+// ── Client Device RMA (doc 25) ───────────────────────────────────────────
+
+// Already exported above: createDeviceRMA, updateDeviceRMA, deleteDeviceRMA
+
+// ── PO Receipts + V3 Chase (doc 19, 25) ──────────────────────────────────
+
+// Already exported above: addPOReceipt, deletePOReceipt, chasePOVendor
+
+// ── Credentials Vault: Rotate/Revoke/Audit (doc 15, 25) ───────────────────
+
+// Already exported above: rotateCredential, revokeCredential, accessCredential
+
+// ── Module Order: T2 Send (doc 14) ────────────────────────────────────────
+
+// Already exported above: sendModuleOrderT2
+
+// ── Agency Assets: Assign/Unassign (doc 25) ──────────────────────────────
+
+// Already exported above: assignAgencyAsset, unassignAgencyAsset
+
+// ── Client Device RMA (doc 25) ────────────────────────────────────────────
+
+// Already exported above: createDeviceRMA, updateDeviceRMA, deleteDeviceRMA
+
+// ── PO Receipts + V3 Chase (doc 19, 25) ──────────────────────────────────
+
+// Already exported above: addPOReceipt, deletePOReceipt, chasePOVendor
