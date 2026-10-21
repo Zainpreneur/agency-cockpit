@@ -96,3 +96,25 @@ export const githubApi = {
   enablePages: (owner: string, repo: string, source: any) => apiFetch<any>(`/api/github/pages/${owner}/${repo}`, { method: 'POST', body: JSON.stringify({ source }) }),
   getUser: () => apiFetch<any>('/api/github/user'),
 }
+
+// ── Email (Sequenzy) ──────────────────────────────────────────────────────
+export const emailApi = {
+  send: (data: any) => apiFetch<any>('/api/email/send', { method: 'POST', body: JSON.stringify(data) }),
+  sendOutbox: (id: number) => apiFetch<any>(`/api/email/send-outbox/${id}`, { method: 'POST' }),
+  skipOutbox: (id: number) => apiFetch<any>(`/api/email/skip-outbox/${id}`, { method: 'POST' }),
+  pasteReply: (data: any) => apiFetch<any>('/api/email/paste-reply', { method: 'POST', body: JSON.stringify(data) }),
+}
+
+// ── Payments (Stripe) ──────────────────────────────────────────────────────
+export const paymentsApi = {
+  createIntent: (data: any) => apiFetch<any>('/api/stripe/payment-intent', { method: 'POST', body: JSON.stringify(data) }),
+  createLink: (data: any) => apiFetch<any>('/api/stripe/payment-link', { method: 'POST', body: JSON.stringify(data) }),
+  invoicePaymentLink: (id: number) => apiFetch<any>(`/api/stripe/invoice-payment-link/${id}`, { method: 'POST' }),
+}
+
+// ── Cron ───────────────────────────────────────────────────────────────────
+export const cronApi = {
+  status: () => apiFetch<any[]>('/api/cron/status'),
+  run: (name: string) => apiFetch<any>(`/api/cron/run/${name}`, { method: 'POST' }),
+  runAll: () => apiFetch<any>('/api/cron/run-all', { method: 'POST' }),
+}

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { OfflineIndicator } from './lib/offline'
 import { Today } from './pages/Today'
 import { Dashboard } from './pages/Dashboard'
 import { LeadsBoard } from './pages/LeadsBoard'
@@ -144,7 +143,6 @@ export function App() {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      <OfflineIndicator />
       {/* Desktop sidebar */}
       <aside className="hidden md:block w-56 shrink-0 bg-white border-r border-gray-200 sticky top-0 h-screen overflow-y-auto">
         <Sidebar />
