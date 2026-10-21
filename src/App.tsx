@@ -39,6 +39,12 @@ import { AgencyAssets } from './pages/AgencyAssets'
 import { CommsLog } from './pages/CommsLog'
 import { Credentials } from './pages/Credentials'
 import { Analytics } from './pages/Analytics'
+import { Offboarding } from './pages/Offboarding'
+import { TemplateUpdatePRs } from './pages/TemplateUpdatePRs'
+import { MoneyLanes } from './pages/MoneyLanes'
+import { Connectors } from './pages/Connectors'
+import { PasscodeGate } from './pages/PasscodeGate'
+import { ReportsDrilldown } from './pages/ReportsDrilldown'
 import { CommandPalette, useCommandPalette } from './components/CommandPalette'
 
 type NavItem = { to: string; label: string; exact?: boolean }
@@ -81,6 +87,9 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
   { title: 'Ops', items: [
     { to: '/default-salvage', label: 'Default/Salvage' },
     { to: '/multi-branch', label: 'Multi-Branch' },
+    { to: '/offboarding', label: 'Offboarding' },
+    { to: '/connectors', label: 'Connectors' },
+    { to: '/passcode-gate', label: 'Passcode Gate' },
   ]},
   { title: 'Comms', items: [
     { to: '/comms/outbox', label: 'Outbox' },
@@ -89,6 +98,11 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
   ]},
   { title: 'Infra', items: [
     { to: '/credentials', label: 'Credentials' },
+    { to: '/template-update-prs', label: 'Template PRs' },
+  ]},
+  { title: 'Money+', items: [
+    { to: '/money-lanes', label: 'Money Lanes' },
+    { to: '/reports-drilldown', label: 'Reports Drilldown' },
   ]},
   { title: '', items: [
     { to: '/calendar', label: '▦ Calendar' },
@@ -192,6 +206,12 @@ export function App() {
             <Route path="/comms-log" element={<CommsLog />} />
             <Route path="/credentials" element={<Credentials />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/offboarding" element={<Offboarding />} />
+            <Route path="/template-update-prs" element={<TemplateUpdatePRs />} />
+            <Route path="/money-lanes" element={<MoneyLanes />} />
+            <Route path="/connectors" element={<Connectors />} />
+            <Route path="/passcode-gate" element={<PasscodeGate />} />
+            <Route path="/reports-drilldown" element={<ReportsDrilldown />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
