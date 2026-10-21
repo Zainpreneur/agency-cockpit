@@ -80,12 +80,19 @@ export const settingsApi = {
   update: (key: string, value: string) => apiFetch<any>(`/api/settings/${key}`, { method: 'PUT', body: JSON.stringify({ value }) }),
 }
 
-// ── Status Events ──────────────────────────────────────────────────────────
-export const statusEventsApi = {
-  list: (entity?: string, entityId?: number) => {
-    const params = new URLSearchParams()
-    if (entity) params.set('entity', entity)
-    if (entityId) params.set('entityId', String(entityId))
-    return apiFetch<any[]>(`/api/status-events?${params}`)
-  },
+// ── GitHub Integration ─────────────────────────────────────────────────────
+export const githubApi = {
+  listRepos: () => apiFetch<any[]>('/api/github/repos'),
+  getRepo: (owner: string, repo: string) => apiFetch<any>(`/api/github/repos/${owner}/${repo}`),
+  syncCatalogue: () => apiFetch<any>('/api/github/sync-catalogue', { method: 'POST' }),
+  listReleases: (owner: string, repo: string) => apiFetch<any[]>(`/api/github/releases/${owner}/${repo}`),
+  getLatestRelease: (owner: string, repo: string) => apiFetch<any>(`/api/github/releases/${owner}/${repo}/latest`),
+  listIssues: (owner: string, repo: string, state?: string) => apiFetch<any[]>(`/api/github/issues/${owner}/${repo}${state ? `?state=${state}` : ''}`),
+  createIssue: (owner: string, repo: string, data: any) => apiFetch<any>(`/api/github/issues/${owner}/${repo}`, { method: 'POST', body: JSON.stringify(data) }),
+  listPRs: (owner: string, repo: string, state?: string) => apiFetch<any[]>(`/api/github/prs/${owner}/${repo}${state ? `?state=${state}` : ''}`),
+  createPR: (owner: string, repo: string, data: any) => apiFetch<any>(`/api/github/prs/${owner}/${repo}`, { method: 'POST', body: JSON.stringify(data) }),
+  mergePR: (owner: string, repo: string, number: number) => apiFetch<any>(`/api/github/prs/${owner}/${repo}/${number}/merge`, { method: 'POST' }),
+  createDemoRepo: (data: any) => apiFetch<any>('/api/github/demo-repo', { method: 'POST', body: JSON.stringify(data) }),
+  enablePages: (owner: string, repo: string, source: any) => apiFetch<any>(`/api/github/pages/${owner}/${repo}`, { method: 'POST', body: JSON.stringify({ source }) }),
+  getUser: () => apiFetch<any>('/api/github/user'),
 }
