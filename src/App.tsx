@@ -38,6 +38,7 @@ import { InvestorPayouts } from './pages/InvestorPayouts'
 import { AgencyAssets } from './pages/AgencyAssets'
 import { CommsLog } from './pages/CommsLog'
 import { Credentials } from './pages/Credentials'
+import { Analytics } from './pages/Analytics'
 import { CommandPalette, useCommandPalette } from './components/CommandPalette'
 
 type NavItem = { to: string; label: string; exact?: boolean }
@@ -73,6 +74,7 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
     { to: '/expenses', label: 'Expenses' },
     { to: '/funding-rounds', label: 'Funding Rounds' },
     { to: '/reports', label: 'Reports' },
+    { to: '/analytics', label: 'Analytics' },
     { to: '/bank-reconciliation', label: 'Bank Recon' },
   ]},
   { title: 'People', items: [{ to: '/people', label: 'Team & investors' }] },
@@ -189,6 +191,7 @@ export function App() {
             <Route path="/agency-assets" element={<AgencyAssets />} />
             <Route path="/comms-log" element={<CommsLog />} />
             <Route path="/credentials" element={<Credentials />} />
+            <Route path="/analytics" element={<Analytics />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
