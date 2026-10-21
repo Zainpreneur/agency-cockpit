@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { PageHeader, SectionCard } from '../components/Layout'
 import { Chip } from '../components/StatusChip'
+import { RTLToggle } from '../components/RTLToggle'
 
 export function Settings() {
   const [ownerName, setOwnerName] = useState('Zain')
@@ -138,6 +139,15 @@ export function Settings() {
               >
                 <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${darkMode ? 'left-6.5' : 'left-0.5'}`} />
               </button>
+            </div>
+            <div className="flex items-center justify-between gap-4 pt-3 border-t border-gray-100">
+              <div>
+                <div className="text-sm font-medium text-gray-900">RTL / Arabic layout</div>
+                <div className="text-xs text-gray-500 mt-0.5">
+                  Switch to right-to-left layout for Arabic client-facing artifacts.
+                </div>
+              </div>
+              <RTLToggle />
             </div>
           </div>
         </SectionCard>
