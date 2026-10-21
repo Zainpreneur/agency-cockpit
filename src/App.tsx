@@ -26,6 +26,10 @@ import { ModuleOrders } from './pages/ModuleOrders'
 import { Tickets } from './pages/Tickets'
 import { ClientRepos } from './pages/ClientRepos'
 import { UpdatePRs } from './pages/UpdatePRs'
+import { Reports } from './pages/Reports'
+import { BankReconciliation } from './pages/BankReconciliation'
+import { DefaultSalvage } from './pages/DefaultSalvage'
+import { MultiBranch } from './pages/MultiBranch'
 import { CommandPalette, useCommandPalette } from './components/CommandPalette'
 
 type NavItem = { to: string; label: string; exact?: boolean }
@@ -54,8 +58,14 @@ const GROUPS: { title: string; items: NavItem[] }[] = [
   { title: 'Money', items: [
     { to: '/money/invoices', label: 'Invoices' },
     { to: '/money/payouts', label: 'Payouts' },
+    { to: '/reports', label: 'Reports' },
+    { to: '/bank-reconciliation', label: 'Bank Recon' },
   ]},
   { title: 'People', items: [{ to: '/people', label: 'Team & investors' }] },
+  { title: 'Ops', items: [
+    { to: '/default-salvage', label: 'Default/Salvage' },
+    { to: '/multi-branch', label: 'Multi-Branch' },
+  ]},
   { title: 'Comms', items: [
     { to: '/comms/outbox', label: 'Outbox' },
     { to: '/comms/templates', label: 'Templates' },
@@ -149,6 +159,10 @@ export function App() {
             <Route path="/comms/templates" element={<Templates />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/bank-reconciliation" element={<BankReconciliation />} />
+            <Route path="/default-salvage" element={<DefaultSalvage />} />
+            <Route path="/multi-branch" element={<MultiBranch />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
